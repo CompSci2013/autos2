@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autos2-backend
+  namespace: autos2
+  labels:
+    app: autos2-backend
+    tier: backend
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: autos2-backend
+  template:
+    metadata:
+      labels:
+        app: autos2-backend
+        tier: backend
+        version: v1.0.0
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: thor
+      containers:
+      - name: backend
+        image: localhost/autos2-backend:v1.0.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: ELASTICSEARCH_HOST
+          value: "http://elasticsearch.data.svc.cluster.local:9200"
+        - name: ELASTICSEARCH_INDEX
+          value: "autos-unified"
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: API_VERSION
+          value: "v1"
+        - name: CORS_ORIGIN
+          value: "http://autos2.minilab"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"

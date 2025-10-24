@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autos2
+  labels:
+    name: autos2
+    tier: application
+    project: autos2

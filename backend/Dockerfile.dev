@@ -1,0 +1,27 @@
+# Autos2 Backend - Development Dockerfile
+# For running npm commands and development server in container
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install essential tools for development
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies (including devDependencies)
+RUN npm install
+
+# Copy TypeScript configuration
+COPY tsconfig.json ./
+
+# Expose port
+EXPOSE 3000
+
+# Keep container running for exec commands
+CMD ["tail", "-f", "/dev/null"]
