@@ -1,0 +1,37 @@
+.discover-container {
+  max-width: 1400px;
+  margin: 0 auto;
+
+  h1 {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #001529;
+  }
+}
+
+.filter-card {
+  margin-bottom: 24px;
+
+  nz-form-item {
+    margin-bottom: 16px;
+  }
+
+  nz-form-label {
+    font-weight: 600;
+  }
+
+  button {
+    margin-top: 8px;
+  }
+}
+
+.results-card {
+  nz-table {
+    font-size: 14px;
+  }
+
+  td {
+    white-space: nowrap;
+  }
+}

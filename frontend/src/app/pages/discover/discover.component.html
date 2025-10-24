@@ -1,0 +1,123 @@
+<div class="discover-container">
+  <h1>Discover Vehicles</h1>
+
+  <nz-card nzTitle="Search Filters" class="filter-card">
+    <form nz-form>
+      <nz-row [nzGutter]="16">
+        <nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>Manufacturer</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                nzShowSearch
+                nzAllowClear
+                nzPlaceHolder="Select manufacturer"
+                [(ngModel)]="searchFilters.manufacturer"
+                [ngModelOptions]="{standalone: true}"
+                (ngModelChange)="onManufacturerChange()">
+                <nz-option
+                  *ngFor="let mfr of manufacturers"
+                  [nzValue]="mfr.name"
+                  [nzLabel]="mfr.name + ' (' + mfr.count + ')'">
+                </nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+
+        <nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>Model</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                nzShowSearch
+                nzAllowClear
+                nzPlaceHolder="Select model"
+                [(ngModel)]="searchFilters.model"
+                [ngModelOptions]="{standalone: true}"
+                [nzDisabled]="!searchFilters.manufacturer"
+                (ngModelChange)="onSearchChange()">
+                <nz-option
+                  *ngFor="let model of models"
+                  [nzValue]="model.name"
+                  [nzLabel]="model.name + ' (' + model.count + ')'">
+                </nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+
+        <nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>Body Class</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                nzShowSearch
+                nzAllowClear
+                nzPlaceHolder="Select body class"
+                [(ngModel)]="searchFilters.body_class"
+                [ngModelOptions]="{standalone: true}"
+                (ngModelChange)="onSearchChange()">
+                <nz-option
+                  *ngFor="let bc of availableFilters?.body_classes"
+                  [nzValue]="bc.value"
+                  [nzLabel]="bc.value + ' (' + bc.count + ')'">
+                </nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+      </nz-row>
+
+      <nz-row [nzGutter]="16">
+        <nz-col [nzSpan]="24">
+          <button nz-button nzType="primary" (click)="searchVehicles()">
+            Search
+          </button>
+          <button nz-button (click)="clearFilters()" style="margin-left: 8px;">
+            Clear
+          </button>
+        </nz-col>
+      </nz-row>
+    </form>
+  </nz-card>
+
+  <nz-card nzTitle="Search Results" class="results-card">
+    <nz-table
+      #vehicleTable
+      [nzData]="vehicles"
+      [nzLoading]="loading"
+      [nzPageSize]="pagination.limit"
+      [nzTotal]="pagination.total"
+      [nzPageIndex]="pagination.page"
+      (nzPageIndexChange)="onPageChange($event)"
+      [nzShowSizeChanger]="true"
+      (nzPageSizeChange)="onPageSizeChange($event)"
+      [nzPageSizeOptions]="[10, 20, 50, 100]">
+      <thead>
+        <tr>
+          <th>VIN</th>
+          <th>Year</th>
+          <th>Make</th>
+          <th>Model</th>
+          <th>Body Class</th>
+          <th>Body Style</th>
+          <th>Engine</th>
+          <th>Drive Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let vehicle of vehicleTable.data">
+          <td>{{ vehicle.vin }}</td>
+          <td>{{ vehicle.year }}</td>
+          <td>{{ vehicle.make }}</td>
+          <td>{{ vehicle.model }}</td>
+          <td>{{ vehicle.body_class || '-' }}</td>
+          <td>{{ vehicle.body_style || '-' }}</td>
+          <td>{{ vehicle.engine_model || '-' }}</td>
+          <td>{{ vehicle.drive_type || '-' }}</td>
+        </tr>
+      </tbody>
+    </nz-table>
+  </nz-card>
+</div>

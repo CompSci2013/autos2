@@ -1,0 +1,21 @@
+<nz-layout class="app-layout">
+  <nz-header>
+    <div class="logo">
+      <span>Autos2</span>
+    </div>
+    <ul nz-menu nzTheme="dark" nzMode="horizontal" class="header-menu">
+      <li nz-menu-item routerLink="/home" routerLinkActive="ant-menu-item-selected">
+        <span>Home</span>
+      </li>
+      <li nz-menu-item routerLink="/discover" routerLinkActive="ant-menu-item-selected">
+        <span>Discover</span>
+      </li>
+    </ul>
+  </nz-header>
+  <nz-content>
+    <div class="inner-content">
+      <router-outlet></router-outlet>
+    </div>
+  </nz-content>
+  <nz-footer>Autos2 Vehicle Database - Powered by Elasticsearch</nz-footer>
+</nz-layout>

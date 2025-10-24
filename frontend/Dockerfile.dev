@@ -1,0 +1,10 @@
+FROM node:18-alpine
+
+# Install Angular CLI globally and other development tools
+RUN apk add --no-cache bash curl git && \
+    npm install -g @angular/cli@14
+
+WORKDIR /app
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]

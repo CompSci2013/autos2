@@ -1,0 +1,46 @@
+.app-layout {
+  min-height: 100vh;
+}
+
+nz-header {
+  display: flex;
+  align-items: center;
+  padding: 0 50px;
+  background: #001529;
+}
+
+.logo {
+  float: left;
+  width: 120px;
+  height: 31px;
+  margin: 16px 24px 16px 0;
+
+  span {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 600;
+  }
+}
+
+.header-menu {
+  flex: 1;
+  line-height: 64px;
+  border: none;
+}
+
+nz-content {
+  padding: 24px 50px;
+  background: #f0f2f5;
+}
+
+.inner-content {
+  background: #fff;
+  padding: 24px;
+  min-height: calc(100vh - 134px);
+}
+
+nz-footer {
+  text-align: center;
+  background: #001529;
+  color: rgba(255, 255, 255, 0.65);
+}

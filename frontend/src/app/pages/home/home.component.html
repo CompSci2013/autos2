@@ -1,0 +1,61 @@
+<div class="home-container">
+  <div class="hero-section">
+    <h1>Welcome to Autos2</h1>
+    <p>Explore our comprehensive vehicle database powered by Elasticsearch</p>
+  </div>
+
+  <nz-row [nzGutter]="[24, 24]">
+    <nz-col [nzSpan]="8">
+      <nz-card nzTitle="Database Statistics" [nzBordered]="true" class="feature-card">
+        <div *ngIf="stats">
+          <div class="stat-item">
+            <h3>{{ stats.total_vehicles | number }}</h3>
+            <p>Total Vehicles</p>
+          </div>
+          <div class="stat-item">
+            <h3>{{ stats.total_manufacturers | number }}</h3>
+            <p>Manufacturers</p>
+          </div>
+        </div>
+        <div *ngIf="!stats">
+          <p>Loading statistics...</p>
+        </div>
+      </nz-card>
+    </nz-col>
+
+    <nz-col [nzSpan]="8">
+      <nz-card nzTitle="Discover Vehicles" [nzBordered]="true" class="feature-card">
+        <p>Search and filter through our extensive vehicle database</p>
+        <p>Find vehicles by manufacturer, model, year, and more</p>
+        <button nz-button nzType="primary" nzBlock routerLink="/discover">
+          Start Exploring
+        </button>
+      </nz-card>
+    </nz-col>
+
+    <nz-col [nzSpan]="8">
+      <nz-card nzTitle="Advanced Features" [nzBordered]="true" class="feature-card">
+        <ul>
+          <li>Real-time search powered by Elasticsearch</li>
+          <li>Advanced filtering options</li>
+          <li>Detailed vehicle information</li>
+          <li>Fast and responsive interface</li>
+        </ul>
+      </nz-card>
+    </nz-col>
+  </nz-row>
+
+  <div class="info-section">
+    <nz-card nzTitle="About This Application">
+      <p>
+        Autos2 is a modern vehicle database application built with Angular 14 and powered by
+        Elasticsearch. It provides a fast and intuitive interface for exploring vehicle data,
+        with powerful search and filtering capabilities.
+      </p>
+      <p>
+        This application demonstrates best practices in modern web development, including
+        component-based architecture, reactive programming, and containerized deployment.
+      </p>
+    </nz-card>
+  </div>
+</div>
