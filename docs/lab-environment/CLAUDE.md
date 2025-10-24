@@ -1,9 +1,9 @@
-# AUTOS Application - Claude Onboarding Reference
+# Autos2 Application - Claude Onboarding Reference
 
-**Path:** `/home/odin/projects/autos/CLAUDE.md`  
+**Path:** `/home/odin/projects/autos2/CLAUDE.md`  
 **Created:** 2025-10-13  
 **Updated:** 2025-10-18  
-**Purpose:** Complete reference for Claude to rapidly understand and develop the AUTOS application
+**Purpose:** Complete reference for Claude to rapidly understand and develop the Autos2 application
 
 ---
 
@@ -42,7 +42,7 @@ Container Runtime: containerd (K3s) + Podman (builds)
 ### AUTOS Project Location
 
 ```bash
-Thor: /home/odin/projects/autos/
+Thor: /home/odin/projects/autos2/
 ├── backend/              # Node.js + Express API
 ├── frontend/             # Angular 14 application
 ├── data/scripts/         # Elasticsearch data loading
@@ -57,10 +57,10 @@ Thor: /home/odin/projects/autos/
 ### Kubernetes Resources
 
 ```yaml
-Namespace: autos
-Access URL: http://autos.minilab
-Backend Service: autos-backend.autos.svc.cluster.local:3000
-Frontend Service: autos-frontend.autos.svc.cluster.local:80
+Namespace: autos2
+Access URL: http://autos2.minilab
+Backend Service: autos2-backend.autos2.svc.cluster.local:3000
+Frontend Service: autos2-frontend.autos2.svc.cluster.local:80
 Data Store: elasticsearch.data.svc.cluster.local:9200
 Index: autos-unified
 ```
@@ -75,7 +75,7 @@ Index: autos-unified
 ┌─────────────────────────────────────────────────────────────┐
 │                    AUTOS ARCHITECTURE                        │
 │                                                              │
-│  Browser (http://autos.minilab)                             │
+│  Browser (http://autos2.minilab)                             │
 │       │                                                      │
 │       ├─> Angular Frontend (port 80)                        │
 │       │   ├── URL-driven state (query parameters)           │
@@ -131,13 +131,13 @@ Index: autos-unified
 ### Frontend Images
 
 ```yaml
-Development Image: localhost/autos-frontend:dev
+Development Image: localhost/autos2-frontend:dev
   Base: node:14-alpine
   Port: 4200
   Features: Hot Module Reload (HMR), live reload
   Use: VS Code development only
 
-Production Image: localhost/autos-frontend:prod
+Production Image: localhost/autos2-frontend:prod
   Base: nginx:alpine
   Port: 80
   Features: Optimized build, static serving
@@ -147,7 +147,7 @@ Production Image: localhost/autos-frontend:prod
 ### Backend Images
 
 ```yaml
-Current Version: localhost/autos-backend:v1.2.5
+Current Version: localhost/autos2-backend:v1.2.5
   Base: node:18-alpine
   Port: 3000
   Features: Express API, Elasticsearch client
@@ -207,7 +207,7 @@ PORT: 3000
 
 ### Current Version: v1.2.5
 
-**Base URL:** `http://autos.minilab/api` (proxied) or `http://localhost:3000` (dev)
+**Base URL:** `http://autos2.minilab/api` (proxied) or `http://localhost:3000` (dev)
 
 ### Endpoints
 
@@ -430,12 +430,12 @@ AppComponent
 
 ```bash
 # 1. Start dev container with HMR
-cd /home/odin/projects/autos/frontend
+cd /home/odin/projects/autos2/frontend
 podman run -d \
-  --name autos-frontend-dev \
+  --name autos2-frontend-dev \
   -p 4200:4200 \
   -v ./:/app:z \
-  localhost/autos-frontend:dev
+  localhost/autos2-frontend:dev
 
 # 2. Edit files (VS Code Remote-SSH to Thor)
 # Changes auto-reload via HMR
@@ -447,11 +447,11 @@ podman run -d \
 
 ```bash
 # 1. Build production image
-cd /home/odin/projects/autos/frontend
-podman build -f Dockerfile.prod -t localhost/autos-frontend:prod .
+cd /home/odin/projects/autos2/frontend
+podman build -f Dockerfile.prod -t localhost/autos2-frontend:prod .
 
 # 2. Save as tar
-podman save -o autos-frontend-prod.tar localhost/autos-frontend:prod
+podman save -o autos-frontend-prod.tar localhost/autos2-frontend:prod
 
 # 3. Import to K3s
 sudo k3s ctr images import autos-frontend-prod.tar
@@ -461,7 +461,7 @@ sudo k3s ctr images list | grep autos-frontend
 
 # 5. Deploy to Kubernetes (rolling update)
 kubectl apply -f k8s/frontend-deployment.yaml
-kubectl rollout status deployment/autos-frontend -n autos
+kubectl rollout status deployment/autos2-frontend -n autos2
 ```
 
 ### Backend Development Workflow
@@ -470,25 +470,25 @@ kubectl rollout status deployment/autos-frontend -n autos
 
 ```bash
 # 1. Increment version in package.json
-cd /home/odin/projects/autos/backend
+cd /home/odin/projects/autos2/backend
 # Edit package.json: "version": "1.2.6"
 
 # 2. Build image with new version
 VERSION=$(node -p "require('./package.json').version")
-podman build -t localhost/autos-backend:v${VERSION} .
+podman build -t localhost/autos2-backend:v${VERSION} .
 
 # 3. Save as tar
-podman save -o autos-backend-v${VERSION}.tar localhost/autos-backend:v${VERSION}
+podman save -o autos-backend-v${VERSION}.tar localhost/autos2-backend:v${VERSION}
 
 # 4. Import to K3s
 sudo k3s ctr images import autos-backend-v${VERSION}.tar
 
 # 5. Update deployment manifest
-# Edit k8s/backend-deployment.yaml: image: localhost/autos-backend:v1.2.6
+# Edit k8s/backend-deployment.yaml: image: localhost/autos2-backend:v1.2.6
 
 # 6. Apply to cluster
 kubectl apply -f k8s/backend-deployment.yaml
-kubectl rollout status deployment/autos-backend -n autos
+kubectl rollout status deployment/autos2-backend -n autos2
 ```
 
 ---
@@ -693,46 +693,46 @@ When beginning any implementation or complex task, acknowledge that context trac
 ### Check Cluster Status
 
 ```bash
-kubectl get pods -n autos
-kubectl get svc -n autos
-kubectl logs -n autos deployment/autos-backend --tail=50
-kubectl logs -n autos deployment/autos-frontend --tail=50
+kubectl get pods -n autos2
+kubectl get svc -n autos2
+kubectl logs -n autos2 deployment/autos2-backend --tail=50
+kubectl logs -n autos2 deployment/autos2-frontend --tail=50
 ```
 
 ### Restart Services
 
 ```bash
-kubectl rollout restart deployment/autos-backend -n autos
-kubectl rollout restart deployment/autos-frontend -n autos
+kubectl rollout restart deployment/autos2-backend -n autos2
+kubectl rollout restart deployment/autos2-frontend -n autos2
 ```
 
 ### Access Services
 
 ```bash
 # Frontend
-curl http://autos.minilab
+curl http://autos2.minilab
 
 # Backend health
-curl http://autos.minilab/api/health
+curl http://autos2.minilab/api/health
 
 # Backend manufacturer counts
-curl http://autos.minilab/api/search/manufacturer-model-counts
+curl http://autos2.minilab/api/search/manufacturer-model-counts
 ```
 
 ### Development Container Management
 
 ```bash
 # Start dev frontend
-podman run -d --name autos-frontend-dev -p 4200:4200 \
-  -v /home/odin/projects/autos/frontend:/app:z \
-  localhost/autos-frontend:dev
+podman run -d --name autos2-frontend-dev -p 4200:4200 \
+  -v /home/odin/projects/autos2/frontend:/app:z \
+  localhost/autos2-frontend:dev
 
 # Stop dev frontend
-podman stop autos-frontend-dev
-podman rm autos-frontend-dev
+podman stop autos2-frontend-dev
+podman rm autos2-frontend-dev
 
 # View logs
-podman logs -f autos-frontend-dev
+podman logs -f autos2-frontend-dev
 ```
 
 ---
@@ -743,10 +743,10 @@ podman logs -f autos-frontend-dev
 
 ```bash
 # Check pod status
-kubectl get pods -n autos
+kubectl get pods -n autos2
 
 # Check logs
-kubectl logs -n autos deployment/autos-frontend
+kubectl logs -n autos2 deployment/autos2-frontend
 
 # Common issues:
 # 1. Image not imported: sudo k3s ctr images list | grep autos-frontend
@@ -758,10 +758,10 @@ kubectl logs -n autos deployment/autos-frontend
 
 ```bash
 # Check backend logs
-kubectl logs -n autos deployment/autos-backend --tail=100
+kubectl logs -n autos2 deployment/autos2-backend --tail=100
 
 # Check Elasticsearch connectivity
-kubectl exec -n autos deployment/autos-backend -- \
+kubectl exec -n autos2 deployment/autos2-backend -- \
   curl http://elasticsearch.data.svc.cluster.local:9200/_cluster/health
 
 # Common issues:
@@ -783,7 +783,7 @@ sudo k3s ctr images list | grep autos
 sudo k3s ctr images import autos-frontend-prod.tar
 
 # Check image name matches deployment
-kubectl get deployment autos-frontend -n autos -o yaml | grep image
+kubectl get deployment autos-frontend -n autos2 -o yaml | grep image
 ```
 
 ---
@@ -815,7 +815,7 @@ kubectl get deployment autos-frontend -n autos -o yaml | grep image
 ### 2025-10-14 (v1.1.0)
 
 - **Production frontend deployed** for the first time
-- Updated `frontend-deployment.yaml` to use `localhost/autos-frontend:prod`
+- Updated `frontend-deployment.yaml` to use `localhost/autos2-frontend:prod`
 - Added production frontend build and deployment procedures
 - Clarified development vs production workflows
 - Added troubleshooting for frontend image issues
@@ -836,6 +836,6 @@ kubectl get deployment autos-frontend -n autos -o yaml | grep image
 
 ---
 
-**END OF AUTOS APPLICATION REFERENCE DOCUMENT**
+**END OF Autos2 APPLICATION REFERENCE DOCUMENT**
 
-This document should be read at the start of every new Claude session to ensure rapid understanding and immediate productivity on the AUTOS project.
+This document should be read at the start of every new Claude session to ensure rapid understanding and immediate productivity on the Autos2 project.

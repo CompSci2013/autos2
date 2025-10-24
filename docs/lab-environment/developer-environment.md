@@ -1,15 +1,15 @@
-# AUTOS Development Environment Setup Procedure
+# Autos2 Development Environment Setup Procedure
 
 **Document Version:** 2.0  
 **Date:** 2025-10-14  
-**Purpose:** Clean procedure to tear down and rebuild AUTOS development environment from scratch
+**Purpose:** Clean procedure to tear down and rebuild Autos2 development environment from scratch
 
 ---
 
 ## Overview
 
 This document provides verified steps to:
-1. Remove all existing AUTOS containers and images
+1. Remove all existing Autos2 containers and images
 2. Rebuild and deploy the backend to Kubernetes
 3. Verify backend deployment
 4. Build both frontend images (dev and production)
@@ -20,7 +20,7 @@ This document provides verified steps to:
 **Prerequisites:**
 - K3s cluster running with Traefik ingress
 - Elasticsearch service available at `elasticsearch.data.svc.cluster.local:9200`
-- AUTOS namespace exists in Kubernetes
+- Autos2 namespace exists in Kubernetes
 - Podman installed for container builds
 - kubectl configured for cluster access
 
@@ -28,26 +28,26 @@ This document provides verified steps to:
 
 ## Phase 1: Complete Cleanup
 
-### Step 1: Stop and Remove All AUTOS Containers
+### Step 1: Stop and Remove All Autos2 Containers
 
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos
-podman stop autos-backend-dev autos-frontend-dev
-podman rm autos-backend-dev autos-frontend-dev
+cd /home/odin/projects/autos2
+podman stop autos2-backend-dev autos2-frontend-dev
+podman rm autos2-backend-dev autos2-frontend-dev
 ```
 
 **Expected Output:** Container names confirming removal (SIGKILL warnings are normal)
 
 ---
 
-### Step 2: Remove All AUTOS Images from Podman
+### Step 2: Remove All Autos2 Images from Podman
 
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos
+cd /home/odin/projects/autos2
 podman images | grep autos
 ```
 
@@ -55,19 +55,19 @@ podman images | grep autos
 
 ```bash
 # Remove all listed images (example command, adjust to your images)
-podman rmi localhost/autos-backend:v1.2.5 localhost/autos-frontend:dev localhost/autos-frontend:prod
+podman rmi localhost/autos2-backend:v1.2.5 localhost/autos2-frontend:dev localhost/autos2-frontend:prod
 ```
 
 **Expected Output:** "Untagged" and "Deleted" messages for each image
 
 ---
 
-### Step 3: Remove All AUTOS Images from K3s
+### Step 3: Remove All Autos2 Images from K3s
 
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos
+cd /home/odin/projects/autos2
 sudo k3s ctr images list | grep autos
 ```
 
@@ -75,7 +75,7 @@ sudo k3s ctr images list | grep autos
 
 ```bash
 # Remove all listed images (example command, adjust to your images)
-sudo k3s ctr images rm localhost/autos-backend:v1.2.5 localhost/autos-frontend:prod
+sudo k3s ctr images rm localhost/autos2-backend:v1.2.5 localhost/autos2-frontend:prod
 ```
 
 **Expected Output:** Image names confirming removal
@@ -103,9 +103,9 @@ podman images | grep autos
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos
-kubectl scale deployment autos-backend autos-frontend --replicas=0 -n autos
-kubectl get pods -n autos
+cd /home/odin/projects/autos2
+kubectl scale deployment autos2-backend autos2-frontend --replicas=0 -n autos2
+kubectl get pods -n autos2
 ```
 
 **Expected Output:** "No resources found in autos namespace"
@@ -118,12 +118,12 @@ kubectl get pods -n autos
 
 ```bash
 # Backend directory
-cd /home/odin/projects/autos/backend
+cd /home/odin/projects/autos2/backend
 ls -lh *.tar 2>/dev/null
 rm *.tar 2>/dev/null
 
 # Frontend directory
-cd /home/odin/projects/autos/frontend
+cd /home/odin/projects/autos2/frontend
 ls -lh *.tar 2>/dev/null
 rm *.tar 2>/dev/null
 ```
@@ -139,13 +139,13 @@ rm *.tar 2>/dev/null
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/backend
-podman build -t localhost/autos-backend:v1.2.5 .
+cd /home/odin/projects/autos2/backend
+podman build -t localhost/autos2-backend:v1.2.5 .
 ```
 
 **Expected Output:** 
 - "STEP 1/7" through "STEP 7/7"
-- "Successfully tagged localhost/autos-backend:v1.2.5"
+- "Successfully tagged localhost/autos2-backend:v1.2.5"
 - Final image hash
 
 **Build Time:** ~1-2 minutes with clean cache
@@ -157,8 +157,8 @@ podman build -t localhost/autos-backend:v1.2.5 .
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/backend
-podman save localhost/autos-backend:v1.2.5 -o autos-backend-v1.2.5.tar
+cd /home/odin/projects/autos2/backend
+podman save localhost/autos2-backend:v1.2.5 -o autos2-backend-v1.2.5.tar
 ```
 
 **Expected Output:** 
@@ -173,12 +173,12 @@ podman save localhost/autos-backend:v1.2.5 -o autos-backend-v1.2.5.tar
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/backend
-sudo k3s ctr images import autos-backend-v1.2.5.tar
+cd /home/odin/projects/autos2/backend
+sudo k3s ctr images import autos2-backend-v1.2.5.tar
 ```
 
 **Expected Output:** 
-- "localhost/autos-backend:v1.2.5 saved"
+- "localhost/autos2-backend:v1.2.5 saved"
 - Import completion with timing
 
 ---
@@ -188,10 +188,10 @@ sudo k3s ctr images import autos-backend-v1.2.5.tar
 **Server:** Thor
 
 ```bash
-sudo k3s ctr images list | grep autos-backend
+sudo k3s ctr images list | grep autos2-backend
 ```
 
-**Expected Output:** One line showing `localhost/autos-backend:v1.2.5` with size ~157 MiB
+**Expected Output:** One line showing `localhost/autos2-backend:v1.2.5` with size ~157 MiB
 
 ---
 
@@ -200,11 +200,11 @@ sudo k3s ctr images list | grep autos-backend
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos
-kubectl scale deployment autos-backend --replicas=2 -n autos
+cd /home/odin/projects/autos2
+kubectl scale deployment autos2-backend --replicas=2 -n autos2
 ```
 
-**Expected Output:** "deployment.apps/autos-backend scaled"
+**Expected Output:** "deployment.apps/autos2-backend scaled"
 
 ---
 
@@ -213,7 +213,7 @@ kubectl scale deployment autos-backend --replicas=2 -n autos
 **Server:** Thor
 
 ```bash
-kubectl get pods -n autos -w
+kubectl get pods -n autos2 -w
 ```
 
 **Expected Output:** 
@@ -230,12 +230,12 @@ kubectl get pods -n autos -w
 
 ```bash
 # Test internal health endpoint
-kubectl run -n autos curl-test --image=curlimages/curl:latest --rm -it --restart=Never -- curl http://autos-backend:3000/health
+kubectl run -n autos2 curl-test --image=curlimages/curl:latest --rm -it --restart=Never -- curl http://autos2-backend:3000/health
 ```
 
 **Expected Output:** 
 ```json
-{"status":"ok","service":"autos-backend","timestamp":"2025-10-14T..."}
+{"status":"ok","service":"autos2-backend","timestamp":"2025-10-14T..."}
 ```
 
 ---
@@ -245,7 +245,7 @@ kubectl run -n autos curl-test --image=curlimages/curl:latest --rm -it --restart
 **Server:** Thor
 
 ```bash
-curl http://autos.minilab/api/v1/manufacturer-model-combinations?size=2 | jq
+curl http://autos2.minilab/api/v1/manufacturer-model-combinations?size=2 | jq
 ```
 
 **Expected Output:** 
@@ -268,13 +268,13 @@ curl http://autos.minilab/api/v1/manufacturer-model-combinations?size=2 | jq
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/frontend
-podman build -f Dockerfile.prod -t localhost/autos-frontend:prod .
+cd /home/odin/projects/autos2/frontend
+podman build -f Dockerfile.prod -t localhost/autos2-frontend:prod .
 ```
 
 **Expected Output:** 
 - Multi-stage build process (Node.js → nginx)
-- "Successfully tagged localhost/autos-frontend:prod"
+- "Successfully tagged localhost/autos2-frontend:prod"
 
 **Build Time:** ~2-5 minutes depending on cache
 
@@ -285,8 +285,8 @@ podman build -f Dockerfile.prod -t localhost/autos-frontend:prod .
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/frontend
-podman save localhost/autos-frontend:prod -o autos-frontend-prod.tar
+cd /home/odin/projects/autos2/frontend
+podman save localhost/autos2-frontend:prod -o autos2-frontend-prod.tar
 ```
 
 **Expected Output:** 
@@ -301,13 +301,13 @@ podman save localhost/autos-frontend:prod -o autos-frontend-prod.tar
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/frontend
-sudo k3s ctr images import autos-frontend-prod.tar
+cd /home/odin/projects/autos2/frontend
+sudo k3s ctr images import autos2-frontend-prod.tar
 ```
 
 **Expected Output:** 
 - "unpacking" messages
-- "localhost/autos-frontend:prod saved"
+- "localhost/autos2-frontend:prod saved"
 
 ---
 
@@ -316,10 +316,10 @@ sudo k3s ctr images import autos-frontend-prod.tar
 **Server:** Thor
 
 ```bash
-sudo k3s ctr images list | grep autos-frontend
+sudo k3s ctr images list | grep autos2-frontend
 ```
 
-**Expected Output:** Line showing `localhost/autos-frontend:prod` with size ~52-53 MiB
+**Expected Output:** Line showing `localhost/autos2-frontend:prod` with size ~52-53 MiB
 
 ---
 
@@ -328,19 +328,19 @@ sudo k3s ctr images list | grep autos-frontend
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/k8s
+cd /home/odin/projects/autos2/k8s
 nano frontend-deployment.yaml
 ```
 
 **Change Required:**
 Find line ~22:
 ```yaml
-        image: localhost/autos-frontend:dev
+        image: localhost/autos2-frontend:dev
 ```
 
 Change to:
 ```yaml
-        image: localhost/autos-frontend:prod
+        image: localhost/autos2-frontend:prod
 ```
 
 **Save:** `Ctrl+O`, `Enter`, `Ctrl+X`
@@ -352,11 +352,11 @@ Change to:
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/k8s
+cd /home/odin/projects/autos2/k8s
 kubectl apply -f frontend-deployment.yaml
 ```
 
-**Expected Output:** "deployment.apps/autos-frontend configured"
+**Expected Output:** "deployment.apps/autos2-frontend configured"
 
 ---
 
@@ -365,11 +365,11 @@ kubectl apply -f frontend-deployment.yaml
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos
-kubectl scale deployment autos-frontend --replicas=2 -n autos
+cd /home/odin/projects/autos2
+kubectl scale deployment autos2-frontend --replicas=2 -n autos2
 ```
 
-**Expected Output:** "deployment.apps/autos-frontend scaled"
+**Expected Output:** "deployment.apps/autos2-frontend scaled"
 
 ---
 
@@ -378,7 +378,7 @@ kubectl scale deployment autos-frontend --replicas=2 -n autos
 **Server:** Thor
 
 ```bash
-kubectl get pods -n autos -w
+kubectl get pods -n autos2 -w
 ```
 
 **Expected Output:** 
@@ -395,13 +395,13 @@ kubectl get pods -n autos -w
 
 ```bash
 # Check all pods are running
-kubectl get pods -n autos
+kubectl get pods -n autos2
 
 # Test API through production ingress
-curl -s http://autos.minilab/api/v1/manufacturer-model-combinations?size=2 | jq '.data[0]'
+curl -s http://autos2.minilab/api/v1/manufacturer-model-combinations?size=2 | jq '.data[0]'
 
 # Access frontend in browser
-firefox http://autos.minilab
+firefox http://autos2.minilab
 ```
 
 **Expected Output:** 
@@ -416,8 +416,8 @@ firefox http://autos.minilab
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/frontend
-rm autos-frontend-prod.tar
+cd /home/odin/projects/autos2/frontend
+rm autos2-frontend-prod.tar
 ```
 
 ---
@@ -429,13 +429,13 @@ rm autos-frontend-prod.tar
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/frontend
-podman build -f Dockerfile.dev -t localhost/autos-frontend:dev .
+cd /home/odin/projects/autos2/frontend
+podman build -f Dockerfile.dev -t localhost/autos2-frontend:dev .
 ```
 
 **Expected Output:** 
 - Build process installing Angular CLI
-- "Successfully tagged localhost/autos-frontend:dev"
+- "Successfully tagged localhost/autos2-frontend:dev"
 
 **Build Time:** ~1-3 minutes depending on cache
 
@@ -448,8 +448,8 @@ podman build -f Dockerfile.dev -t localhost/autos-frontend:dev .
 **Server:** Thor
 
 ```bash
-cd /home/odin/projects/autos/frontend
-podman run -d --name autos-frontend-dev --network host -v /home/odin/projects/autos/frontend:/app:z -w /app localhost/autos-frontend:dev
+cd /home/odin/projects/autos2/frontend
+podman run -d --name autos2-frontend-dev --network host -v /home/odin/projects/autos2/frontend:/app:z -w /app localhost/autos2-frontend:dev
 ```
 
 **Expected Output:** Container ID hash (64 characters)
@@ -461,10 +461,10 @@ podman run -d --name autos-frontend-dev --network host -v /home/odin/projects/au
 **Server:** Thor
 
 ```bash
-podman ps | grep autos-frontend-dev
+podman ps | grep autos2-frontend-dev
 ```
 
-**Expected Output:** Line showing container status "Up" with `autos-frontend-dev` name
+**Expected Output:** Line showing container status "Up" with `autos2-frontend-dev` name
 
 ---
 
@@ -473,7 +473,7 @@ podman ps | grep autos-frontend-dev
 **Server:** Thor
 
 ```bash
-podman exec -it autos-frontend-dev npm start -- --host 0.0.0.0 --port 4200
+podman exec -it autos2-frontend-dev npm start -- --host 0.0.0.0 --port 4200
 ```
 
 **Expected Output:** 
@@ -487,7 +487,7 @@ podman exec -it autos-frontend-dev npm start -- --host 0.0.0.0 --port 4200
 
 **Access Points:**
 - **Dev Server:** http://localhost:4200 or http://thor:4200
-- **Production App:** http://autos.minilab
+- **Production App:** http://autos2.minilab
 
 ---
 
@@ -496,15 +496,15 @@ podman exec -it autos-frontend-dev npm start -- --host 0.0.0.0 --port 4200
 After completing all steps, verify:
 
 - [ ] No old autos containers: `podman ps -a | grep autos` (only dev container)
-- [ ] Dev image in Podman: `podman images | grep autos-frontend:dev`
-- [ ] Backend image in K3s: `sudo k3s ctr images list | grep autos-backend`
-- [ ] Frontend prod image in K3s: `sudo k3s ctr images list | grep autos-frontend:prod`
-- [ ] Two backend pods running: `kubectl get pods -n autos | grep backend`
-- [ ] Two frontend pods running: `kubectl get pods -n autos | grep frontend`
-- [ ] Backend health check passes: `curl http://autos.minilab/api/health`
-- [ ] Backend API responds: `curl http://autos.minilab/api/v1/manufacturer-model-combinations?size=1`
-- [ ] Production frontend accessible: http://autos.minilab
-- [ ] Dev container running: `podman ps | grep autos-frontend-dev`
+- [ ] Dev image in Podman: `podman images | grep autos2-frontend:dev`
+- [ ] Backend image in K3s: `sudo k3s ctr images list | grep autos2-backend`
+- [ ] Frontend prod image in K3s: `sudo k3s ctr images list | grep autos2-frontend:prod`
+- [ ] Two backend pods running: `kubectl get pods -n autos2 | grep backend`
+- [ ] Two frontend pods running: `kubectl get pods -n autos2 | grep frontend`
+- [ ] Backend health check passes: `curl http://autos2.minilab/api/health`
+- [ ] Backend API responds: `curl http://autos2.minilab/api/v1/manufacturer-model-combinations?size=1`
+- [ ] Production frontend accessible: http://autos2.minilab
+- [ ] Dev container running: `podman ps | grep autos2-frontend-dev`
 - [ ] Angular dev server compiles: Shows compilation output
 - [ ] Dev frontend accessible: http://localhost:4200
 
@@ -515,17 +515,17 @@ After completing all steps, verify:
 After successful setup:
 
 **Production (Kubernetes Deployment):**
-- **Frontend:** http://autos.minilab
-- **Backend API:** http://autos.minilab/api/v1/...
-- **Backend Health:** http://autos.minilab/api/health
+- **Frontend:** http://autos2.minilab
+- **Backend API:** http://autos2.minilab/api/v1/...
+- **Backend Health:** http://autos2.minilab/api/health
 
 **Development (Local Podman):**
 - **Dev Frontend:** http://localhost:4200 or http://thor:4200
 - **Backend (via proxy):** http://localhost:3000 (when using dev frontend)
 
 **Direct Services (Internal):**
-- **Backend Service:** http://autos-backend.autos.svc.cluster.local:3000
-- **Frontend Service:** http://autos-frontend.autos.svc.cluster.local:80
+- **Backend Service:** http://autos2-backend.autos2.svc.cluster.local:3000
+- **Frontend Service:** http://autos2-frontend.autos2.svc.cluster.local:80
 - **Elasticsearch:** http://elasticsearch.data.svc.cluster.local:9200
 
 ---
@@ -542,16 +542,16 @@ PORT: 3000
 ```
 
 ### Frontend Development Container
-- **Image:** `localhost/autos-frontend:dev`
+- **Image:** `localhost/autos2-frontend:dev`
 - **Base:** node:18-alpine
-- **Volume Mount:** `/home/odin/projects/autos/frontend:/app:z` (SELinux compatible)
+- **Volume Mount:** `/home/odin/projects/autos2/frontend:/app:z` (SELinux compatible)
 - **Network:** host (access backend at localhost:3000)
 - **Working Directory:** /app
 - **Stay-Alive Command:** `tail -f /dev/null`
 - **Purpose:** Hot module reloading for rapid development
 
 ### Frontend Production Container
-- **Image:** `localhost/autos-frontend:prod`
+- **Image:** `localhost/autos2-frontend:prod`
 - **Base:** Multi-stage (node:18-alpine → nginx:alpine)
 - **Purpose:** Compiled Angular app served by nginx
 - **Deployment:** Kubernetes pods with ClusterIP service
@@ -559,10 +559,10 @@ PORT: 3000
 
 ### Ingress Routing
 ```yaml
-Host: autos.minilab
+Host: autos2.minilab
 Routes:
-  /api → autos-backend:3000
-  /    → autos-frontend:80
+  /api → autos2-backend:3000
+  /    → autos2-frontend:80
 ```
 
 ---
@@ -574,16 +574,16 @@ Routes:
 **Start Development Session:**
 ```bash
 # 1. Verify production backend is running
-kubectl get pods -n autos | grep backend
+kubectl get pods -n autos2 | grep backend
 
 # 2. Start dev container (if not already running)
-cd /home/odin/projects/autos/frontend
-podman run -d --name autos-frontend-dev --network host \
-  -v /home/odin/projects/autos/frontend:/app:z -w /app \
-  localhost/autos-frontend:dev
+cd /home/odin/projects/autos2/frontend
+podman run -d --name autos2-frontend-dev --network host \
+  -v /home/odin/projects/autos2/frontend:/app:z -w /app \
+  localhost/autos2-frontend:dev
 
 # 3. Start Angular dev server
-podman exec -it autos-frontend-dev npm start -- --host 0.0.0.0 --port 4200
+podman exec -it autos2-frontend-dev npm start -- --host 0.0.0.0 --port 4200
 
 # 4. Edit files in VS Code (Remote-SSH)
 # Watch terminal for automatic recompilation
@@ -596,8 +596,8 @@ podman exec -it autos-frontend-dev npm start -- --host 0.0.0.0 --port 4200
 # Stop dev server: Ctrl+C in terminal
 
 # Optional: Remove dev container
-podman stop autos-frontend-dev
-podman rm autos-frontend-dev
+podman stop autos2-frontend-dev
+podman rm autos2-frontend-dev
 ```
 
 ### Deploy Frontend Changes to Production
@@ -605,15 +605,15 @@ podman rm autos-frontend-dev
 **After completing development work:**
 ```bash
 # 1. Build new production image
-cd /home/odin/projects/autos/frontend
-podman build -f Dockerfile.prod -t localhost/autos-frontend:prod-v2 .
+cd /home/odin/projects/autos2/frontend
+podman build -f Dockerfile.prod -t localhost/autos2-frontend:prod-v2 .
 
 # 2. Export and import to K3s
-podman save localhost/autos-frontend:prod-v2 -o autos-frontend-prod-v2.tar
-sudo k3s ctr images import autos-frontend-prod-v2.tar
+podman save localhost/autos2-frontend:prod-v2 -o autos2-frontend-prod-v2.tar
+sudo k3s ctr images import autos2-frontend-prod-v2.tar
 
 # 3. Update deployment manifest
-cd /home/odin/projects/autos/k8s
+cd /home/odin/projects/autos2/k8s
 nano frontend-deployment.yaml
 # Change image tag to :prod-v2
 
@@ -621,12 +621,12 @@ nano frontend-deployment.yaml
 kubectl apply -f frontend-deployment.yaml
 
 # 5. Watch rollout
-kubectl rollout status deployment/autos-frontend -n autos
+kubectl rollout status deployment/autos2-frontend -n autos2
 
 # 6. Verify
-kubectl get pods -n autos
-curl http://autos.minilab/api/v1/manufacturer-model-combinations?size=1
-firefox http://autos.minilab
+kubectl get pods -n autos2
+curl http://autos2.minilab/api/v1/manufacturer-model-combinations?size=1
+firefox http://autos2.minilab
 ```
 
 ### Backend Development
@@ -634,25 +634,25 @@ firefox http://autos.minilab
 **Make changes and deploy:**
 ```bash
 # 1. Edit code
-cd /home/odin/projects/autos/backend/src
+cd /home/odin/projects/autos2/backend/src
 
 # 2. Build new image
-cd /home/odin/projects/autos/backend
-podman build -t localhost/autos-backend:v1.2.6 .
+cd /home/odin/projects/autos2/backend
+podman build -t localhost/autos2-backend:v1.2.6 .
 
 # 3. Export and import
-podman save localhost/autos-backend:v1.2.6 -o autos-backend-v1.2.6.tar
-sudo k3s ctr images import autos-backend-v1.2.6.tar
+podman save localhost/autos2-backend:v1.2.6 -o autos2-backend-v1.2.6.tar
+sudo k3s ctr images import autos2-backend-v1.2.6.tar
 
 # 4. Update deployment
-cd /home/odin/projects/autos/k8s
+cd /home/odin/projects/autos2/k8s
 nano backend-deployment.yaml
 # Change image tag to :v1.2.6
 kubectl apply -f backend-deployment.yaml
 
 # 5. Verify
-kubectl rollout status deployment/autos-backend -n autos
-curl http://autos.minilab/api/health
+kubectl rollout status deployment/autos2-backend -n autos2
+curl http://autos2.minilab/api/health
 ```
 
 ---
@@ -663,8 +663,8 @@ curl http://autos.minilab/api/health
 
 **Symptom:**
 ```bash
-kubectl get pods -n autos
-# autos-frontend-xxxxx   0/1   ErrImageNeverPull   0   2m
+kubectl get pods -n autos2
+# autos2-frontend-xxxxx   0/1   ErrImageNeverPull   0   2m
 ```
 
 **Cause:** Image not in K3s containerd
@@ -672,46 +672,46 @@ kubectl get pods -n autos
 **Solution:**
 ```bash
 # Verify image exists
-sudo k3s ctr images list | grep autos-frontend
+sudo k3s ctr images list | grep autos2-frontend
 
 # If missing, rebuild and import
-cd /home/odin/projects/autos/frontend
-podman build -f Dockerfile.prod -t localhost/autos-frontend:prod .
-podman save localhost/autos-frontend:prod -o autos-frontend-prod.tar
-sudo k3s ctr images import autos-frontend-prod.tar
+cd /home/odin/projects/autos2/frontend
+podman build -f Dockerfile.prod -t localhost/autos2-frontend:prod .
+podman save localhost/autos2-frontend:prod -o autos2-frontend-prod.tar
+sudo k3s ctr images import autos2-frontend-prod.tar
 
 # Restart deployment
-kubectl rollout restart deployment/autos-frontend -n autos
+kubectl rollout restart deployment/autos2-frontend -n autos2
 ```
 
 ### Dev Container Exits Immediately
 
 **Symptom:**
 ```bash
-podman ps | grep autos-frontend-dev
+podman ps | grep autos2-frontend-dev
 # No output
 ```
 
 **Solution:**
 ```bash
 # Check logs
-podman logs autos-frontend-dev
+podman logs autos2-frontend-dev
 
 # Remove and restart
-podman rm autos-frontend-dev
-podman run -d --name autos-frontend-dev --network host \
-  -v /home/odin/projects/autos/frontend:/app:z -w /app \
-  localhost/autos-frontend:dev
+podman rm autos2-frontend-dev
+podman run -d --name autos2-frontend-dev --network host \
+  -v /home/odin/projects/autos2/frontend:/app:z -w /app \
+  localhost/autos2-frontend:dev
 
 # Verify
-podman ps | grep autos-frontend-dev
+podman ps | grep autos2-frontend-dev
 ```
 
 ### Permission Denied in Dev Container
 
 **Symptom:**
 ```bash
-podman exec -it autos-frontend-dev npm start
+podman exec -it autos2-frontend-dev npm start
 # Error: EACCES: permission denied
 ```
 
@@ -720,18 +720,18 @@ podman exec -it autos-frontend-dev npm start
 **Solution:**
 ```bash
 # Restart container with proper SELinux context
-podman stop autos-frontend-dev
-podman rm autos-frontend-dev
-podman run -d --name autos-frontend-dev --network host \
-  -v /home/odin/projects/autos/frontend:/app:z \
-  -w /app localhost/autos-frontend:dev
+podman stop autos2-frontend-dev
+podman rm autos2-frontend-dev
+podman run -d --name autos2-frontend-dev --network host \
+  -v /home/odin/projects/autos2/frontend:/app:z \
+  -w /app localhost/autos2-frontend:dev
 ```
 
 ### Backend Cannot Connect to Elasticsearch
 
 **Symptom:**
 ```bash
-kubectl logs -n autos deployment/autos-backend
+kubectl logs -n autos2 deployment/autos2-backend
 # Connection refused errors
 ```
 
@@ -741,7 +741,7 @@ kubectl logs -n autos deployment/autos-backend
 kubectl get pods -n data | grep elasticsearch
 
 # Test connectivity
-kubectl exec -n autos deployment/autos-backend -- \
+kubectl exec -n autos2 deployment/autos2-backend -- \
   curl -s http://elasticsearch.data.svc.cluster.local:9200/_cluster/health
 ```
 
@@ -753,9 +753,9 @@ Frontend deployment using `:dev` instead of `:prod`
 **Solution:**
 ```bash
 # Edit deployment manifest
-cd /home/odin/projects/autos/k8s
+cd /home/odin/projects/autos2/k8s
 nano frontend-deployment.yaml
-# Change: image: localhost/autos-frontend:prod
+# Change: image: localhost/autos2-frontend:prod
 
 # Apply changes
 kubectl apply -f frontend-deployment.yaml
