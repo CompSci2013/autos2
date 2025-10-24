@@ -51,7 +51,7 @@ export class VehicleService {
     }
 
     const result = await esClient.search(query);
-    const buckets = result.aggregations?.manufacturers.buckets as any[] || [];
+    const buckets = (result.aggregations?.manufacturers as any)?.buckets || [];
 
     const manufacturers: Manufacturer[] = buckets.map((bucket: any) => ({
       name: bucket.key,
@@ -121,7 +121,7 @@ export class VehicleService {
       },
     });
 
-    const buckets = result.aggregations?.models.buckets as any[] || [];
+    const buckets = (result.aggregations?.models as any)?.buckets || [];
 
     const models: Model[] = buckets.map((bucket: any) => ({
       name: bucket.key,
@@ -376,18 +376,18 @@ export class VehicleService {
       },
     });
 
-    const aggs = result.aggregations || {};
+    const aggs: any = result.aggregations || {};
 
     return {
-      body_classes: this.mapBuckets(aggs as any.body_classes?.buckets || []),
-      body_styles: this.mapBuckets(aggs as any.body_styles?.buckets || []),
+      body_classes: this.mapBuckets(aggs.body_classes?.buckets || []),
+      body_styles: this.mapBuckets(aggs.body_styles?.buckets || []),
       years: {
-        min: aggs as any.year_min?.value || 1950,
-        max: aggs as any.year_max?.value || 2025,
+        min: aggs.year_min?.value || 1950,
+        max: aggs.year_max?.value || 2025,
       },
-      engine_types: this.mapBuckets(aggs as any.engine_types?.buckets || []),
-      drive_types: this.mapBuckets(aggs as any.drive_types?.buckets || []),
-      transmission_types: this.mapBuckets(aggs as any.transmission_types?.buckets || []),
+      engine_types: this.mapBuckets(aggs.engine_types?.buckets || []),
+      drive_types: this.mapBuckets(aggs.drive_types?.buckets || []),
+      transmission_types: this.mapBuckets(aggs.transmission_types?.buckets || []),
     };
   }
 
@@ -420,17 +420,17 @@ export class VehicleService {
     });
 
     const count = await esClient.count({ index: this.index });
-    const aggs = result.aggregations || {};
+    const aggs: any = result.aggregations || {};
 
     return {
       total_vehicles: count.count,
-      total_manufacturers: aggs as any.total_manufacturers?.value || 0,
-      total_models: aggs as any.total_models?.value || 0,
+      total_manufacturers: aggs.total_manufacturers?.value || 0,
+      total_models: aggs.total_models?.value || 0,
       year_range: {
-        min: aggs as any.year_min?.value || 1950,
-        max: aggs as any.year_max?.value || 2025,
+        min: aggs.year_min?.value || 1950,
+        max: aggs.year_max?.value || 2025,
       },
-      data_sources: this.mapBuckets(aggs as any.data_sources?.buckets || []).map((b) => ({
+      data_sources: this.mapBuckets(aggs.data_sources?.buckets || []).map((b) => ({
         source: b.value,
         count: b.count,
       })),
