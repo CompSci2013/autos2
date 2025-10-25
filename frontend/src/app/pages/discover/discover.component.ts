@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
   VehicleService,
   Manufacturer,
@@ -12,7 +14,9 @@ import {
   templateUrl: './discover.component.html',
   styleUrls: ['./discover.component.scss']
 })
-export class DiscoverComponent implements OnInit {
+export class DiscoverComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   manufacturers: Manufacturer[] = [];
   models: Model[] = [];
   vehicles: Vehicle[] = [];
@@ -42,42 +46,22 @@ export class DiscoverComponent implements OnInit {
   }
 
   loadManufacturers(): void {
-    this.vehicleService.getManufacturers().subscribe({
-      next: (data) => {
-        this.manufacturers = data;
-      },
-      error: (error) => {
-        console.error('Error loading manufacturers:', error);
-      }
-    });
+    this.vehicleService.getManufacturers()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.manufacturers = data;
+        },
+        error: (error) => {
+          console.error('Error loading manufacturers:', error);
+        }
+      });
   }
 
   loadFilters(): void {
-    this.vehicleService.getFilters().subscribe({
-      next: (data) => {
-        this.availableFilters = data;
-      },
-      error: (error) => {
-        console.error('Error loading filters:', error);
-      }
-    });
-  }
-
-  onManufacturerChange(): void {
-    this.searchFilters.model = null;
-    this.models = [];
-
-    if (this.searchFilters.manufacturer) {
-      this.vehicleService.getModels(this.searchFilters.manufacturer).subscribe({
-        next: (data) => {
-          this.models = data;
-        },
-        error: (error) => {
-          console.error('Error loading models:', error);
-        }
-      });
-
-      this.vehicleService.getFilters(this.searchFilters.manufacturer).subscribe({
+    this.vehicleService.getFilters()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
         next: (data) => {
           this.availableFilters = data;
         },
@@ -85,6 +69,34 @@ export class DiscoverComponent implements OnInit {
           console.error('Error loading filters:', error);
         }
       });
+  }
+
+  onManufacturerChange(): void {
+    this.searchFilters.model = null;
+    this.models = [];
+
+    if (this.searchFilters.manufacturer) {
+      this.vehicleService.getModels(this.searchFilters.manufacturer)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (data) => {
+            this.models = data;
+          },
+          error: (error) => {
+            console.error('Error loading models:', error);
+          }
+        });
+
+      this.vehicleService.getFilters(this.searchFilters.manufacturer)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (data) => {
+            this.availableFilters = data;
+          },
+          error: (error) => {
+            console.error('Error loading filters:', error);
+          }
+        });
     } else {
       this.loadFilters();
     }
@@ -105,17 +117,19 @@ export class DiscoverComponent implements OnInit {
       limit: this.pagination.limit
     };
 
-    this.vehicleService.searchVehicles(filters).subscribe({
-      next: (response) => {
-        this.vehicles = response.data;
-        this.pagination = response.pagination;
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('Error searching vehicles:', error);
-        this.loading = false;
-      }
-    });
+    this.vehicleService.searchVehicles(filters)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.vehicles = response.data;
+          this.pagination = response.pagination;
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Error searching vehicles:', error);
+          this.loading = false;
+        }
+      });
   }
 
   clearFilters(): void {
@@ -140,6 +154,11 @@ export class DiscoverComponent implements OnInit {
     this.pagination.limit = size;
     this.pagination.page = 1;
     this.searchVehicles();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
 }
