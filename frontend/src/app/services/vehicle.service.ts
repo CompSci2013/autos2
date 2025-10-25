@@ -85,10 +85,18 @@ export class VehicleService {
     // Backend expects plural "manufacturers" and "models" as arrays
     if (filters.manufacturer) params = params.set('manufacturers', filters.manufacturer);
     if (filters.model) params = params.set('models', filters.model);
-    if (filters.year) params = params.set('year', filters.year);
+
+    // Backend expects year_min and year_max for range filtering (NOT 'year')
+    if (filters.year_min) params = params.set('year_min', filters.year_min);
+    if (filters.year_max) params = params.set('year_max', filters.year_max);
+
     if (filters.body_class) params = params.set('body_class', filters.body_class);
     if (filters.page) params = params.set('page', filters.page);
     if (filters.limit) params = params.set('limit', filters.limit);
+
+    // Add sort parameters if provided
+    if (filters.sort) params = params.set('sort', filters.sort);
+    if (filters.order) params = params.set('order', filters.order);
 
     return this.http.get<{ vehicles: Vehicle[]; pagination: any }>(`${this.apiUrl}/vehicles`, { params })
       .pipe(map(response => ({

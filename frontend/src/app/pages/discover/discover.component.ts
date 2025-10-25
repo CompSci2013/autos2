@@ -41,7 +41,7 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     sortOrder: null
   };
 
-  // Available years for year filter dropdown (last 40 years)
+  // Available years for year filter dropdown (1900-2025)
   availableYears: number[] = [];
 
   constructor(
@@ -49,9 +49,8 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router
   ) {
-    // Generate year range from current year back to 1990
-    const currentYear = new Date().getFullYear();
-    for (let year = currentYear; year >= 1990; year--) {
+    // Generate year range from 2025 back to 1900
+    for (let year = 2025; year >= 1900; year--) {
       this.availableYears.push(year);
     }
   }
