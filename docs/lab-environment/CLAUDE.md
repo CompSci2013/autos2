@@ -1,8 +1,8 @@
 # Autos2 Application - Claude Onboarding Reference
 
-**Path:** `/home/odin/projects/autos2/CLAUDE.md`  
-**Created:** 2025-10-13  
-**Updated:** 2025-10-18  
+**Path:** `/home/odin/projects/autos2/CLAUDE.md`
+**Created:** 2025-10-13
+**Updated:** 2025-10-25
 **Purpose:** Complete reference for Claude to rapidly understand and develop the Autos2 application
 
 ---
@@ -61,8 +61,13 @@ Namespace: autos2
 Access URL: http://autos2.minilab
 Backend Service: autos2-backend.autos2.svc.cluster.local:3000
 Frontend Service: autos2-frontend.autos2.svc.cluster.local:80
-Data Store: elasticsearch.data.svc.cluster.local:9200
-Index: autos-unified
+
+Data Infrastructure (namespace: data):
+  Elasticsearch: elasticsearch.data.svc.cluster.local:9200
+  Kibana: kibana.data.svc.cluster.local:5601
+  Kibana Web UI: http://kibana.minilab (or http://192.168.0.110:30561)
+
+Primary Index: autos-unified (793 documents, 171.1 KB)
 ```
 
 ---
@@ -200,6 +205,43 @@ ELASTICSEARCH_INDEX: autos-unified
 NODE_ENV: production
 PORT: 3000
 ```
+
+### Kibana for Data Exploration
+
+**Access Kibana:**
+```
+Web UI: http://kibana.minilab
+Alternative: http://192.168.0.110:30561
+Internal: http://kibana.data.svc.cluster.local:5601
+```
+
+**Quick Start:**
+1. Create data view for `autos-unified` index
+2. Use **Discover** to explore 793 vehicle documents
+3. Use **Dev Tools** for custom Elasticsearch queries
+4. Create visualizations (pie charts, bar charts, etc.)
+
+**Common Tasks:**
+```bash
+# View index mapping
+GET /autos-unified/_mapping
+
+# Count documents
+GET /autos-unified/_count
+
+# Aggregate by manufacturer
+GET /autos-unified/_search
+{
+  "size": 0,
+  "aggs": {
+    "manufacturers": {
+      "terms": { "field": "manufacturer.keyword", "size": 100 }
+    }
+  }
+}
+```
+
+**Full Reference:** See [docs/lab-environment/kibana-reference.md](kibana-reference.md) for complete guide
 
 ---
 
@@ -790,6 +832,16 @@ kubectl get deployment autos-frontend -n autos2 -o yaml | grep image
 
 ## Changelog
 
+### 2025-10-25 (v1.4.0)
+
+- **Added Kibana documentation** for Elasticsearch data exploration
+  - Created comprehensive [kibana-reference.md](kibana-reference.md) guide
+  - Added Kibana access URLs to Infrastructure Overview
+  - Added Kibana section to Data Pipeline
+  - Documented index mappings for autos-unified (793 documents)
+  - Included common queries and troubleshooting steps
+  - Integration examples with Autos2 backend API
+
 ### 2025-10-18 (v1.3.0)
 
 - **Updated Milestone 003 status** to reflect partial implementation
@@ -830,9 +882,9 @@ kubectl get deployment autos-frontend -n autos2 -o yaml | grep image
 
 ---
 
-**Last Updated:** 2025-10-18  
-**Maintained By:** Claude (with odin)  
-**Version:** 1.3.0
+**Last Updated:** 2025-10-25
+**Maintained By:** Claude (with odin)
+**Version:** 1.4.0
 
 ---
 
