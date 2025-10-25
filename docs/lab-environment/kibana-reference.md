@@ -11,9 +11,10 @@
 1. [Access Information](#access-information)
 2. [Index Overview](#index-overview)
 3. [Quick Start Guide](#quick-start-guide)
-4. [Data Exploration](#data-exploration)
-5. [Common Queries](#common-queries)
-6. [Troubleshooting](#troubleshooting)
+4. [Visual Walkthrough](#visual-walkthrough)
+5. [Data Exploration](#data-exploration)
+6. [Common Queries](#common-queries)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -228,6 +229,75 @@ GET /autos-unified/_mapping
 ```
 GET /_cat/indices/autos-unified?v
 ```
+
+---
+
+## Visual Walkthrough
+
+This section contains screenshots from an actual walkthrough of accessing and exploring the autos-unified index in Kibana.
+
+### Step 1: Kibana Home Page
+
+![Kibana Home Page](screenshots/kibana-01-home-page.png)
+
+Access Kibana at http://kibana.minilab and you'll see the home page with three main solutions: Observability, Security, and Analytics.
+
+### Step 2: Access Stack Management
+
+![Stack Management](screenshots/kibana-02-stack-management.png)
+
+Click "Stack Management" to access index and data view management.
+
+### Step 3: View Index Management
+
+![Index Management](screenshots/kibana-03-index-management.png)
+
+Navigate to Data → Index Management to see all Elasticsearch indices. The `autos-unified` index shows:
+- Health: 🟢 green
+- Documents: 793
+- Size: 171.15kb
+
+### Step 4: Create Data View
+
+![Data Views Page](screenshots/kibana-04-data-views.png)
+
+Navigate to Kibana → Data Views to create a new data view for the autos-unified index.
+
+![Create Data View Form](screenshots/kibana-05-create-data-view-form.png)
+
+Fill in the form:
+- Name: "Autos2 - Unified"
+- Index pattern: "autos-unified*"
+
+![Data View with Timestamp](screenshots/kibana-06-data-view-with-timestamp.png)
+
+Select the timestamp field "ingested_at" and save.
+
+### Step 5: View Field Mappings
+
+![Data View Fields](screenshots/kibana-07-data-view-fields.png)
+
+After creating the data view, you can see all 22 fields with their types (keyword, integer, float, etc.) and whether they're searchable/aggregatable.
+
+### Step 6: Explore Data in Discover
+
+![Discover - Autos Unified](screenshots/kibana-10-discover-autos-unified.png)
+
+Navigate to Analytics → Discover and select "Autos2 - Unified" data view. You'll see:
+- 793 total documents
+- Histogram showing when data was ingested
+- Available fields in the left sidebar
+- Document list with manufacturer, model, year, etc.
+
+### Step 7: Examine Individual Documents
+
+![Expanded Document - Table View](screenshots/kibana-11-expanded-document-table-view.png)
+
+Click the diagonal arrow (↗) next to any document to expand and view all fields in table format.
+
+![Expanded Document - JSON View](screenshots/kibana-12-expanded-document-json-view.png)
+
+Switch to the JSON tab to see the raw Elasticsearch document structure, including the `_source` and indexed `fields`.
 
 ---
 
