@@ -2,12 +2,13 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import {
-  VehicleService,
   Manufacturer,
   Model,
   Vehicle,
   Filters
 } from '../../services/vehicle.service';
+import { VehicleStateService } from '../../features/vehicles/services/vehicle-state.service';
+import { VehicleSearchFilters } from '../../features/vehicles/models/vehicle.model';
 
 @Component({
   selector: 'app-discover',
@@ -17,13 +18,14 @@ import {
 export class DiscoverComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
+  // Local properties bound to template (will be replaced with async pipe in Phase 2.2)
   manufacturers: Manufacturer[] = [];
   models: Model[] = [];
   vehicles: Vehicle[] = [];
   availableFilters: Filters | null = null;
   loading = false;
 
-  searchFilters: any = {
+  searchFilters: VehicleSearchFilters = {
     manufacturer: null,
     model: null,
     body_class: null,
@@ -37,123 +39,61 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     totalPages: 0
   };
 
-  constructor(private vehicleService: VehicleService) { }
+  constructor(private state: VehicleStateService) { }
 
   ngOnInit(): void {
-    this.loadManufacturers();
-    this.loadFilters();
-    this.searchVehicles();
-  }
-
-  loadManufacturers(): void {
-    this.vehicleService.getManufacturers()
+    // Subscribe to state observables
+    this.state.manufacturers$
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data) => {
-          this.manufacturers = data;
-        },
-        error: (error) => {
-          console.error('Error loading manufacturers:', error);
-        }
-      });
-  }
+      .subscribe(data => this.manufacturers = data);
 
-  loadFilters(): void {
-    this.vehicleService.getFilters()
+    this.state.models$
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data) => {
-          this.availableFilters = data;
-        },
-        error: (error) => {
-          console.error('Error loading filters:', error);
-        }
-      });
+      .subscribe(data => this.models = data);
+
+    this.state.vehicles$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(data => this.vehicles = data);
+
+    this.state.availableFilters$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(data => this.availableFilters = data);
+
+    this.state.loading$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(data => this.loading = data);
+
+    this.state.filters$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(data => this.searchFilters = data);
+
+    this.state.pagination$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(data => this.pagination = data);
   }
 
   onManufacturerChange(): void {
-    this.searchFilters.model = null;
-    this.models = [];
-
-    if (this.searchFilters.manufacturer) {
-      this.vehicleService.getModels(this.searchFilters.manufacturer)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (data) => {
-            this.models = data;
-          },
-          error: (error) => {
-            console.error('Error loading models:', error);
-          }
-        });
-
-      this.vehicleService.getFilters(this.searchFilters.manufacturer)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (data) => {
-            this.availableFilters = data;
-          },
-          error: (error) => {
-            console.error('Error loading filters:', error);
-          }
-        });
-    } else {
-      this.loadFilters();
-    }
-
-    this.onSearchChange();
+    this.state.selectManufacturer(this.searchFilters.manufacturer || null);
   }
 
   onSearchChange(): void {
-    this.pagination.page = 1;
+    this.state.updateFilters(this.searchFilters);
   }
 
   searchVehicles(): void {
-    this.loading = true;
-
-    const filters = {
-      ...this.searchFilters,
-      page: this.pagination.page,
-      limit: this.pagination.limit
-    };
-
-    this.vehicleService.searchVehicles(filters)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.vehicles = response.data;
-          this.pagination = response.pagination;
-          this.loading = false;
-        },
-        error: (error) => {
-          console.error('Error searching vehicles:', error);
-          this.loading = false;
-        }
-      });
+    this.state.search(this.searchFilters);
   }
 
   clearFilters(): void {
-    this.searchFilters = {
-      manufacturer: null,
-      model: null,
-      body_class: null,
-      year: null
-    };
-    this.models = [];
-    this.pagination.page = 1;
-    this.loadFilters();
-    this.searchVehicles();
+    this.state.clearFilters();
   }
 
   onPageChange(page: number): void {
-    this.pagination.page = page;
-    this.searchVehicles();
+    this.state.changePage(page);
   }
 
   onPageSizeChange(size: number): void {
-    this.pagination.limit = size;
-    this.pagination.page = 1;
-    this.searchVehicles();
+    this.state.changePageSize(size);
   }
 
   ngOnDestroy(): void {
