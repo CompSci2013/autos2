@@ -933,16 +933,13 @@ describe('VehicleStateService - Navigation & Persistence', () => {
 
       // Initialize service
       service.initialize({});
-      tick(100);
 
-      // Get reference to search spy
-      const searchSpy = vehicleApiSpy.searchVehicles;
-
-      // Subscribe to vehicles$ to activate the reactive search pipeline
+      // Subscribe to vehicles$ FIRST to activate the reactive search pipeline
       const subscription = service.vehicles$.subscribe();
-      tick(100);
+      tick(150); // Wait for initialization to complete
 
-      // Clear the initialization search call
+      // Get reference to search spy and clear initialization calls
+      const searchSpy = vehicleApiSpy.searchVehicles;
       searchSpy.calls.reset();
 
       // Act: Set year filter to 1990 (like in the screenshot)
@@ -982,12 +979,12 @@ describe('VehicleStateService - Navigation & Persistence', () => {
 
       service.initialize({});
       const subscription = service.vehicles$.subscribe();
-      tick(100);
+      tick(150);
 
       const searchSpy = vehicleApiSpy.searchVehicles;
+      searchSpy.calls.reset();
 
       // Test year 2021
-      searchSpy.calls.reset();
       service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2021 });
       tick(150);
 
@@ -1018,7 +1015,7 @@ describe('VehicleStateService - Navigation & Persistence', () => {
 
       service.initialize({});
       const subscription = service.vehicles$.subscribe();
-      tick(100);
+      tick(150);
 
       const searchSpy = vehicleApiSpy.searchVehicles;
       searchSpy.calls.reset();
