@@ -919,6 +919,10 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       }).unsubscribe();
     }));
 
+    // Note: Backend API contract testing (year → year_min/year_max transformation)
+    // is verified via manual testing. Unit tests focus on state management.
+    // TODO: Add proper integration tests for API contract verification
+
     it('should persist year filter in cache for URL sync', fakeAsync(() => {
       // Act: Set year filter
       service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2015 });

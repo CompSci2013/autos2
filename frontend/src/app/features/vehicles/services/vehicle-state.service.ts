@@ -259,6 +259,14 @@ export class VehicleStateService {
           limit: pagination.limit
         };
 
+        // Transform year to year_min/year_max for backend API
+        // Backend expects range parameters, we store single year in state
+        if (filters.year) {
+          params.year_min = filters.year;
+          params.year_max = filters.year;
+          delete params.year; // Remove year from params
+        }
+
         // Add sort parameters if set
         if (sort.sortBy && sort.sortOrder) {
           params.sort = sort.sortBy;
