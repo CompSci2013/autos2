@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-25 (End of Session 2 - Phase 1 Complete)
+**Last Updated**: 2025-10-25 (End of Session 2 - Kubernetes Deployment Complete)
 
 ---
 
@@ -12,19 +12,29 @@ Hello Claude. I'm resuming work on the Autos2 project.
 Project: Autos2 - Vehicle database application (Angular 14 + Node.js + Elasticsearch)
 Location: /home/odin/projects/autos2
 Git Branch: main
-Services Status: [Check with ./check-autos2-status.sh before starting Claude]
+Production URL: http://autos2.minilab
+
+Application Status: DEPLOYED TO KUBERNETES ✅
+- Frontend: http://autos2.minilab (2 replicas, nginx + Angular)
+- Backend API: http://autos2.minilab/api/v1 (2 replicas, Node.js)
+- Namespace: autos2
+- Check pods: kubectl get pods -n autos2
 
 Please orient yourself by reading these key files:
 1. docs/design/angular-architecture.md - Architecture patterns and best practices
 2. docs/design/improvement-roadmap.md - Phased improvement plan (currently on Phase 2)
-3. docs/design/current-state-analysis.md - Current implementation gaps
+3. k8s/ - Kubernetes manifests (namespace, deployments, services, ingress)
 
-Current Status: Phase 1 (Critical Fixes) COMPLETE!
-
-Phase 1 Completed Items:
-- ✅ Subscription cleanup with takeUntil pattern (TD-001)
-- ✅ HTTP error interceptor with user notifications (TD-002)
-- ✅ Global loading interceptor and spinner (TD-002)
+Session 2 Accomplishments:
+✅ Phase 1 (Critical Fixes) - COMPLETE
+  - Subscription cleanup with takeUntil pattern
+  - HTTP error interceptor with user notifications
+  - Global loading interceptor and spinner
+✅ Kubernetes Production Deployment - COMPLETE
+  - Production Dockerfiles created (multi-stage builds)
+  - All services deployed to k8s cluster
+  - Ingress configured with Traefik
+  - Application verified working at http://autos2.minilab
 
 Next Task: Begin Phase 2 - State Management (Week 2)
 
@@ -52,6 +62,8 @@ Let me know when you're oriented and ready to begin.
 - ✅ Shutdown/startup procedures documented
 
 ### What Was Accomplished (Session 2 - 2025-10-25)
+
+**Phase 1 - Critical Fixes (TD-001, TD-002):**
 - ✅ Implemented subscription cleanup with takeUntil pattern
   - Added ngOnDestroy to HomeComponent and DiscoverComponent
   - Created destroy$ Subject for proper cleanup
@@ -65,16 +77,41 @@ Let me know when you're oriented and ready to begin.
   - LoadingService tracks active HTTP requests
   - LoadingInterceptor shows/hides spinner automatically
   - Global nz-spin component in app.component.html
-- ✅ Created core/ directory structure
-  - core/interceptors/
-  - core/services/
-- ✅ All changes committed to git (2 commits)
+  - Fixed ExpressionChangedAfterItHasBeenCheckedError
+
+**Kubernetes Production Deployment:**
+- ✅ Created production Dockerfiles
+  - Backend: Multi-stage build (Node 18 Alpine, non-root user, 126MB)
+  - Frontend: Multi-stage build (Node build + nginx Alpine, 50MB)
+- ✅ Created nginx.conf for frontend
+  - Gzip compression, security headers, caching
+  - SPA routing support (try_files)
+- ✅ Updated environment configs
+  - Changed apiUrl to relative paths (/api/v1)
+  - Works with ingress routing
+- ✅ Fixed Angular budget limits (1.5MB/2MB)
+- ✅ Deployed to Kubernetes
+  - Namespace: autos2
+  - Backend: 2 replicas, liveness/readiness probes
+  - Frontend: 2 replicas, nginx serving
+  - Services: ClusterIP for internal communication
+  - Ingress: Traefik routing autos2.minilab
+- ✅ Verified production deployment
+  - All 4 pods running healthy
+  - DNS configured (autos2.minilab → 192.168.0.110)
+  - Full stack tested and working
+
+**Git Commits:**
+- dfebd03: Subscription cleanup
+- 1b86399: HTTP error and loading interceptors
+- 32ff742: Kubernetes deployment
+- 123c37a: Session documentation (pending)
 
 ### Current State
-- Backend: http://localhost:3000/api/v1 (running and healthy)
-- Frontend: http://localhost:4201 (running and compiled)
-- Git: All Phase 1 work committed to main branch
-- Documentation: Up-to-date
+- **Production**: http://autos2.minilab (Kubernetes, 4 pods running)
+- **Development containers**: Stopped (no longer needed)
+- **Git**: All work committed to main branch
+- **Documentation**: Up-to-date
 
 ### Technical Debt Remaining
 | Priority | Item | Effort | Status |
@@ -107,17 +144,35 @@ Let me know when you're oriented and ready to begin.
 - [Shutdown Procedures](docs/lab-environment/shutdown-startup-procedures.md)
 
 ### Files Created/Modified in Session 2
-**Created:**
-- frontend/src/app/core/interceptors/error.interceptor.ts
-- frontend/src/app/core/interceptors/loading.interceptor.ts
-- frontend/src/app/core/services/loading.service.ts
 
-**Modified:**
-- frontend/src/app/pages/home/home.component.ts (subscription cleanup)
-- frontend/src/app/pages/discover/discover.component.ts (subscription cleanup)
-- frontend/src/app/app.module.ts (register interceptors)
-- frontend/src/app/app.component.ts (inject LoadingService)
-- frontend/src/app/app.component.html (add loading spinner)
+**Phase 1 - Critical Fixes:**
+- Created:
+  - frontend/src/app/core/interceptors/error.interceptor.ts
+  - frontend/src/app/core/interceptors/loading.interceptor.ts
+  - frontend/src/app/core/services/loading.service.ts
+- Modified:
+  - frontend/src/app/pages/home/home.component.ts (subscription cleanup)
+  - frontend/src/app/pages/discover/discover.component.ts (subscription cleanup)
+  - frontend/src/app/app.module.ts (register interceptors)
+  - frontend/src/app/app.component.ts (LoadingService + AfterViewInit fix)
+  - frontend/src/app/app.component.html (loading spinner)
+
+**Kubernetes Deployment:**
+- Created:
+  - frontend/Dockerfile (production multi-stage build)
+  - frontend/nginx.conf (nginx configuration)
+- Modified:
+  - frontend/angular.json (budget limits)
+  - frontend/src/environments/environment.ts (relative API path)
+  - frontend/src/environments/environment.prod.ts (relative API path)
+
+**Kubernetes Manifests** (already existed, now deployed):
+- k8s/namespace.yaml
+- k8s/backend-deployment.yaml
+- k8s/backend-service.yaml
+- k8s/frontend-deployment.yaml
+- k8s/frontend-service.yaml
+- k8s/ingress.yaml
 
 ---
 
