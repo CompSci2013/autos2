@@ -43,10 +43,16 @@ export class VehicleStateService {
   );
 
   constructor(private vehicleApi: VehicleService) {
-    this.initialize();
+    // Don't initialize in constructor to avoid NG0900 errors
+    // Component will call initialize() explicitly when ready
   }
 
-  private initialize(): void {
+  // Helper method to update state outside change detection cycle
+  private updateState<T>(subject: BehaviorSubject<T>, value: T): void {
+    setTimeout(() => subject.next(value), 0);
+  }
+
+  initialize(): void {
     // Load manufacturers on service creation
     this.loadManufacturers();
 
@@ -62,14 +68,14 @@ export class VehicleStateService {
 
   loadManufacturers(): void {
     this.vehicleApi.getManufacturers().subscribe({
-      next: (data) => this.manufacturersSubject.next(data),
+      next: (data) => this.updateState(this.manufacturersSubject, data),
       error: (error) => console.error('Error loading manufacturers:', error)
     });
   }
 
   loadAvailableFilters(manufacturer?: string, model?: string): void {
     this.vehicleApi.getFilters(manufacturer, model).subscribe({
-      next: (data) => this.availableFiltersSubject.next(data),
+      next: (data) => this.updateState(this.availableFiltersSubject, data),
       error: (error) => console.error('Error loading filters:', error)
     });
   }
@@ -82,13 +88,13 @@ export class VehicleStateService {
       model: null  // Reset model when manufacturer changes
     };
 
-    this.filtersSubject.next(newFilters);
-    this.modelsSubject.next([]);  // Clear models
+    this.updateState(this.filtersSubject, newFilters);
+    this.updateState(this.modelsSubject, []);  // Clear models
 
     if (name) {
       // Load models for selected manufacturer
       this.vehicleApi.getModels(name).subscribe({
-        next: (data) => this.modelsSubject.next(data),
+        next: (data) => this.updateState(this.modelsSubject, data),
         error: (error) => console.error('Error loading models:', error)
       });
 
@@ -106,7 +112,7 @@ export class VehicleStateService {
     const currentFilters = this.filtersSubject.value;
     const newFilters: VehicleSearchFilters = { ...currentFilters, model: name };
 
-    this.filtersSubject.next(newFilters);
+    this.updateState(this.filtersSubject, newFilters);
     this.search(newFilters);
   }
 
@@ -114,11 +120,11 @@ export class VehicleStateService {
     const currentFilters = this.filtersSubject.value;
     const newFilters: VehicleSearchFilters = { ...currentFilters, ...filters };
 
-    this.filtersSubject.next(newFilters);
+    this.updateState(this.filtersSubject, newFilters);
 
     // Reset to page 1 when filters change
     const currentPagination = this.paginationSubject.value;
-    this.paginationSubject.next({ ...currentPagination, page: 1 });
+    this.updateState(this.paginationSubject, { ...currentPagination, page: 1 });
 
     this.search(newFilters);
   }
@@ -133,43 +139,43 @@ export class VehicleStateService {
       limit: pagination.limit
     };
 
-    this.loadingSubject.next(true);
+    this.updateState(this.loadingSubject, true);
 
     this.vehicleApi.searchVehicles(params).pipe(
-      finalize(() => this.loadingSubject.next(false))
+      finalize(() => this.updateState(this.loadingSubject, false))
     ).subscribe({
       next: (response) => {
-        this.vehiclesSubject.next(response.data);
-        this.paginationSubject.next(response.pagination);
+        this.updateState(this.vehiclesSubject, response.data);
+        this.updateState(this.paginationSubject, response.pagination);
         this.saveState();
       },
       error: (error) => {
         console.error('Error searching vehicles:', error);
-        this.vehiclesSubject.next([]);
+        this.updateState(this.vehiclesSubject, []);
       }
     });
   }
 
   changePage(page: number): void {
     const pagination = this.paginationSubject.value;
-    this.paginationSubject.next({ ...pagination, page });
+    this.updateState(this.paginationSubject, { ...pagination, page });
     this.search();
   }
 
   changePageSize(limit: number): void {
     const pagination = this.paginationSubject.value;
-    this.paginationSubject.next({ ...pagination, limit, page: 1 });
+    this.updateState(this.paginationSubject, { ...pagination, limit, page: 1 });
     this.search();
   }
 
   clearFilters(): void {
-    this.filtersSubject.next({});
-    this.modelsSubject.next([]);
+    this.updateState(this.filtersSubject, {});
+    this.updateState(this.modelsSubject, []);
     this.loadAvailableFilters();
 
     // Reset pagination
     const currentPagination = this.paginationSubject.value;
-    this.paginationSubject.next({ ...currentPagination, page: 1 });
+    this.updateState(this.paginationSubject, { ...currentPagination, page: 1 });
 
     this.search({});
   }
@@ -193,12 +199,12 @@ export class VehicleStateService {
         const state = JSON.parse(saved);
 
         if (state.filters) {
-          this.filtersSubject.next(state.filters);
+          this.updateState(this.filtersSubject, state.filters);
 
           // If manufacturer was selected, load its models
           if (state.filters.manufacturer) {
             this.vehicleApi.getModels(state.filters.manufacturer).subscribe({
-              next: (data) => this.modelsSubject.next(data),
+              next: (data) => this.updateState(this.modelsSubject, data),
               error: (error) => console.error('Error loading models:', error)
             });
 
@@ -207,7 +213,7 @@ export class VehicleStateService {
         }
 
         if (state.pagination) {
-          this.paginationSubject.next(state.pagination);
+          this.updateState(this.paginationSubject, state.pagination);
         }
       }
     } catch (error) {

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import {
@@ -15,7 +15,7 @@ import { VehicleSearchFilters, Pagination } from '../../features/vehicles/models
   templateUrl: './discover.component.html',
   styleUrls: ['./discover.component.scss']
 })
-export class DiscoverComponent implements OnInit, OnDestroy {
+export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   // Expose observables directly - async pipe handles subscriptions
@@ -41,9 +41,15 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     this.state.filters$
       .pipe(takeUntil(this.destroy$))
       .subscribe(filters => this.searchFilters = filters);
+  }
 
-    // Trigger initial search
-    this.state.search();
+  ngAfterViewInit(): void {
+    // Initialize state service and trigger search after view initialization
+    // This ensures change detection has completed before state updates
+    setTimeout(() => {
+      this.state.initialize();
+      this.state.search();
+    }, 0);
   }
 
   onManufacturerChange(): void {

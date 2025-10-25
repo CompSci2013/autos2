@@ -14,7 +14,8 @@ export class LoadingService {
     this.activeRequests++;
     if (this.activeRequests === 1) {
       // Only show loading on first request
-      this.loadingSubject.next(true);
+      // Wrap in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => this.loadingSubject.next(true));
     }
   }
 
@@ -23,7 +24,8 @@ export class LoadingService {
     if (this.activeRequests <= 0) {
       // Hide loading when all requests complete
       this.activeRequests = 0;
-      this.loadingSubject.next(false);
+      // Wrap in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => this.loadingSubject.next(false));
     }
   }
 
