@@ -34,4 +34,15 @@
   td {
     white-space: nowrap;
   }
+
+  th {
+    nz-filter-trigger {
+      margin-right: 4px;
+    }
+  }
+}
+
+.filter-dropdown {
+  padding: 8px;
+  background: white;
 }

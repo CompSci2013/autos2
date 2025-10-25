@@ -130,25 +130,41 @@
           <th
             nzShowSort
             [nzSortOrder]="getSortOrder('year')"
-            (nzSortOrderChange)="onSortChange('year', $event)">
+            (nzSortOrderChange)="onSortChange('year', $event)"
+            nzCustomFilter>
+            <nz-filter-trigger [(nzVisible)]="yearFilterVisible" [nzActive]="searchFilters.year != null" [nzDropdownMenu]="yearFilterMenu">
+              <i nz-icon nzType="filter" nzTheme="fill"></i>
+            </nz-filter-trigger>
             Year
           </th>
           <th
             nzShowSort
             [nzSortOrder]="getSortOrder('manufacturer')"
-            (nzSortOrderChange)="onSortChange('manufacturer', $event)">
+            (nzSortOrderChange)="onSortChange('manufacturer', $event)"
+            nzCustomFilter>
+            <nz-filter-trigger [(nzVisible)]="manufacturerFilterVisible" [nzActive]="searchFilters.manufacturer != null" [nzDropdownMenu]="manufacturerFilterMenu">
+              <i nz-icon nzType="filter" nzTheme="fill"></i>
+            </nz-filter-trigger>
             Manufacturer
           </th>
           <th
             nzShowSort
             [nzSortOrder]="getSortOrder('model')"
-            (nzSortOrderChange)="onSortChange('model', $event)">
+            (nzSortOrderChange)="onSortChange('model', $event)"
+            nzCustomFilter>
+            <nz-filter-trigger [(nzVisible)]="modelFilterVisible" [nzActive]="searchFilters.model != null" [nzDropdownMenu]="modelFilterMenu">
+              <i nz-icon nzType="filter" nzTheme="fill"></i>
+            </nz-filter-trigger>
             Model
           </th>
           <th
             nzShowSort
             [nzSortOrder]="getSortOrder('body_class')"
-            (nzSortOrderChange)="onSortChange('body_class', $event)">
+            (nzSortOrderChange)="onSortChange('body_class', $event)"
+            nzCustomFilter>
+            <nz-filter-trigger [(nzVisible)]="bodyClassFilterVisible" [nzActive]="searchFilters.body_class != null" [nzDropdownMenu]="bodyClassFilterMenu">
+              <i nz-icon nzType="filter" nzTheme="fill"></i>
+            </nz-filter-trigger>
             Body Class
           </th>
         </tr>
@@ -165,3 +181,77 @@
     </nz-table>
   </nz-card>
 </div>
+
+<!-- Filter Dropdown Menus -->
+<nz-dropdown-menu #yearFilterMenu="nzDropdownMenu">
+  <div class="filter-dropdown">
+    <nz-select
+      nzShowSearch
+      nzAllowClear
+      nzPlaceHolder="Select year"
+      [(ngModel)]="searchFilters.year"
+      (ngModelChange)="onSearchChange(); yearFilterVisible = false"
+      style="width: 200px;">
+      <nz-option
+        *ngFor="let year of availableYears"
+        [nzValue]="year"
+        [nzLabel]="year.toString()">
+      </nz-option>
+    </nz-select>
+  </div>
+</nz-dropdown-menu>
+
+<nz-dropdown-menu #manufacturerFilterMenu="nzDropdownMenu">
+  <div class="filter-dropdown">
+    <nz-select
+      nzShowSearch
+      nzAllowClear
+      nzPlaceHolder="Select manufacturer"
+      [(ngModel)]="searchFilters.manufacturer"
+      (ngModelChange)="onManufacturerChange(); manufacturerFilterVisible = false"
+      style="width: 250px;">
+      <nz-option
+        *ngFor="let mfr of manufacturers$ | async"
+        [nzValue]="mfr.name"
+        [nzLabel]="mfr.name">
+      </nz-option>
+    </nz-select>
+  </div>
+</nz-dropdown-menu>
+
+<nz-dropdown-menu #modelFilterMenu="nzDropdownMenu">
+  <div class="filter-dropdown">
+    <nz-select
+      nzShowSearch
+      nzAllowClear
+      nzPlaceHolder="Select model"
+      [(ngModel)]="searchFilters.model"
+      [nzDisabled]="!searchFilters.manufacturer"
+      (ngModelChange)="onSearchChange(); modelFilterVisible = false"
+      style="width: 250px;">
+      <nz-option
+        *ngFor="let model of models$ | async"
+        [nzValue]="model.name"
+        [nzLabel]="model.name">
+      </nz-option>
+    </nz-select>
+  </div>
+</nz-dropdown-menu>
+
+<nz-dropdown-menu #bodyClassFilterMenu="nzDropdownMenu">
+  <div class="filter-dropdown">
+    <nz-select
+      nzShowSearch
+      nzAllowClear
+      nzPlaceHolder="Select body class"
+      [(ngModel)]="searchFilters.body_class"
+      (ngModelChange)="onSearchChange(); bodyClassFilterVisible = false"
+      style="width: 200px;">
+      <nz-option
+        *ngFor="let bc of (availableFilters$ | async)?.body_classes"
+        [nzValue]="bc.value"
+        [nzLabel]="bc.value">
+      </nz-option>
+    </nz-select>
+  </div>
+</nz-dropdown-menu>

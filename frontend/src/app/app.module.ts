@@ -22,6 +22,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzNotificationModule } from 'ng-zorro-antd/notification';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { HomeComponent } from './pages/home/home.component';
 import { DiscoverComponent } from './pages/discover/discover.component';
 
@@ -48,7 +49,8 @@ import { DiscoverComponent } from './pages/discover/discover.component';
     NzInputModule,
     NzFormModule,
     NzNotificationModule,
-    NzSpinModule
+    NzSpinModule,
+    NzDropDownModule
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },

@@ -44,6 +44,12 @@ export class DiscoverComponent implements OnInit, OnDestroy {
   // Available years for year filter dropdown (1900-2025)
   availableYears: number[] = [];
 
+  // Filter dropdown visibility states
+  yearFilterVisible = false;
+  manufacturerFilterVisible = false;
+  modelFilterVisible = false;
+  bodyClassFilterVisible = false;
+
   constructor(
     private state: VehicleStateService,
     private route: ActivatedRoute,
