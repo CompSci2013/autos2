@@ -9,6 +9,7 @@ import { AppComponent } from './app.component';
 import { ErrorInterceptor } from './core/interceptors/error.interceptor';
 import { LoadingInterceptor } from './core/interceptors/loading.interceptor';
 
+import { NZ_I18N, en_US } from 'ng-zorro-antd/i18n';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -50,6 +51,7 @@ import { DiscoverComponent } from './pages/discover/discover.component';
     NzSpinModule
   ],
   providers: [
+    { provide: NZ_I18N, useValue: en_US },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: LoadingInterceptor,
