@@ -1,6 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Component } from '@angular/core';
+import { Observable } from 'rxjs';
 import { VehicleService, Stats } from '../../services/vehicle.service';
 
 @Component({
@@ -8,32 +7,9 @@ import { VehicleService, Stats } from '../../services/vehicle.service';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
 })
-export class HomeComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
-  stats: Stats | null = null;
+export class HomeComponent {
+  // Expose observable directly - async pipe handles subscription
+  stats$: Observable<Stats> = this.vehicleService.getStats();
 
   constructor(private vehicleService: VehicleService) { }
-
-  ngOnInit(): void {
-    this.loadStats();
-  }
-
-  loadStats(): void {
-    this.vehicleService.getStats()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data) => {
-          this.stats = data;
-        },
-        error: (error) => {
-          console.error('Error loading stats:', error);
-        }
-      });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
 }

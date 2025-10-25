@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import {
   Manufacturer,
@@ -8,7 +8,7 @@ import {
   Filters
 } from '../../services/vehicle.service';
 import { VehicleStateService } from '../../features/vehicles/services/vehicle-state.service';
-import { VehicleSearchFilters } from '../../features/vehicles/models/vehicle.model';
+import { VehicleSearchFilters, Pagination } from '../../features/vehicles/models/vehicle.model';
 
 @Component({
   selector: 'app-discover',
@@ -18,13 +18,15 @@ import { VehicleSearchFilters } from '../../features/vehicles/models/vehicle.mod
 export class DiscoverComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  // Local properties bound to template (will be replaced with async pipe in Phase 2.2)
-  manufacturers: Manufacturer[] = [];
-  models: Model[] = [];
-  vehicles: Vehicle[] = [];
-  availableFilters: Filters | null = null;
-  loading = false;
+  // Expose observables directly - async pipe handles subscriptions
+  manufacturers$: Observable<Manufacturer[]> = this.state.manufacturers$;
+  models$: Observable<Model[]> = this.state.models$;
+  vehicles$: Observable<Vehicle[]> = this.state.vehicles$;
+  availableFilters$: Observable<Filters | null> = this.state.availableFilters$;
+  loading$: Observable<boolean> = this.state.loading$;
+  pagination$: Observable<Pagination> = this.state.pagination$;
 
+  // Local property for two-way binding with form controls
   searchFilters: VehicleSearchFilters = {
     manufacturer: null,
     model: null,
@@ -32,44 +34,13 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     year: null
   };
 
-  pagination = {
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0
-  };
-
   constructor(private state: VehicleStateService) { }
 
   ngOnInit(): void {
-    // Subscribe to state observables
-    this.state.manufacturers$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.manufacturers = data);
-
-    this.state.models$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.models = data);
-
-    this.state.vehicles$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.vehicles = data);
-
-    this.state.availableFilters$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.availableFilters = data);
-
-    this.state.loading$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.loading = data);
-
+    // Sync local searchFilters with state (needed for ngModel binding)
     this.state.filters$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.searchFilters = data);
-
-    this.state.pagination$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(data => this.pagination = data);
+      .subscribe(filters => this.searchFilters = filters);
 
     // Trigger initial search
     this.state.search();
@@ -103,5 +74,4 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
 }

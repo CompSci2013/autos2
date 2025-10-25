@@ -16,7 +16,7 @@
                 [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onManufacturerChange()">
                 <nz-option
-                  *ngFor="let mfr of manufacturers"
+                  *ngFor="let mfr of manufacturers$ | async"
                   [nzValue]="mfr.name"
                   [nzLabel]="mfr.name + ' (' + mfr.count + ')'">
                 </nz-option>
@@ -38,7 +38,7 @@
                 [nzDisabled]="!searchFilters.manufacturer"
                 (ngModelChange)="onSearchChange()">
                 <nz-option
-                  *ngFor="let model of models"
+                  *ngFor="let model of models$ | async"
                   [nzValue]="model.name"
                   [nzLabel]="model.name + ' (' + model.count + ')'">
                 </nz-option>
@@ -59,7 +59,7 @@
                 [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onSearchChange()">
                 <nz-option
-                  *ngFor="let bc of availableFilters?.body_classes"
+                  *ngFor="let bc of (availableFilters$ | async)?.body_classes"
                   [nzValue]="bc.value"
                   [nzLabel]="bc.value + ' (' + bc.count + ')'">
                 </nz-option>
@@ -85,11 +85,11 @@
   <nz-card nzTitle="Search Results" class="results-card">
     <nz-table
       #vehicleTable
-      [nzData]="vehicles"
-      [nzLoading]="loading"
-      [nzPageSize]="pagination.limit"
-      [nzTotal]="pagination.total"
-      [nzPageIndex]="pagination.page"
+      [nzData]="(vehicles$ | async) || []"
+      [nzLoading]="(loading$ | async) || false"
+      [nzPageSize]="(pagination$ | async)?.limit || 20"
+      [nzTotal]="(pagination$ | async)?.total || 0"
+      [nzPageIndex]="(pagination$ | async)?.page || 1"
       (nzPageIndexChange)="onPageChange($event)"
       [nzShowSizeChanger]="true"
       (nzPageSizeChange)="onPageSizeChange($event)"

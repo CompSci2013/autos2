@@ -7,7 +7,7 @@
   <nz-row [nzGutter]="[24, 24]">
     <nz-col [nzSpan]="8">
       <nz-card nzTitle="Database Statistics" [nzBordered]="true" class="feature-card">
-        <div *ngIf="stats">
+        <div *ngIf="stats$ | async as stats; else loading">
           <div class="stat-item">
             <h3>{{ stats.total_vehicles | number }}</h3>
             <p>Total Vehicles</p>
@@ -17,9 +17,9 @@
             <p>Manufacturers</p>
           </div>
         </div>
-        <div *ngIf="!stats">
+        <ng-template #loading>
           <p>Loading statistics...</p>
-        </div>
+        </ng-template>
       </nz-card>
     </nz-col>
 
