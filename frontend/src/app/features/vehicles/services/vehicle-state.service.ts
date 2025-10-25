@@ -115,12 +115,23 @@ export class VehicleStateService {
       )
     ).pipe(
       // Start with empty filters (browse-first pattern)
-      startWith({} as VehicleSearchFilters),
+      // Use explicit nulls to match type definition
+      startWith({
+        manufacturer: null,
+        model: null,
+        body_class: null,
+        year: null
+      }),
       // Accumulate filter changes
       scan((currentFilters, update: any) => {
         // Check if this is a clear action
         if (update._clear) {
-          return {} as VehicleSearchFilters;
+          return {
+            manufacturer: null,
+            model: null,
+            body_class: null,
+            year: null
+          };
         }
 
         // If manufacturer changes (and model not provided), clear model
@@ -243,8 +254,12 @@ export class VehicleStateService {
     );
 
     // Extract server pagination from search results (has total, totalPages)
+    // IMPORTANT: Only extract total/totalPages, NOT page/limit (those come from client)
     const serverPagination$ = searchResult$.pipe(
-      map(result => result.pagination)
+      map(result => ({
+        total: result.pagination.total,
+        totalPages: result.pagination.totalPages
+      }))
     );
 
     // Merge client pagination (page, limit) with server pagination (total, totalPages)

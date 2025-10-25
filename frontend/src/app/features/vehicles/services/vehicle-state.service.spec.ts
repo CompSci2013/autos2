@@ -351,9 +351,9 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       service.initialize({});
       tick(100);
 
-      // Assert: Should use defaults (no saved state)
+      // Assert: Should use defaults (no saved state) - null for empty filters
       service.filters$.subscribe(filters => {
-        expect(filters.manufacturer).toBeUndefined();
+        expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
     }));
 
@@ -398,7 +398,7 @@ describe('VehicleStateService - Navigation & Persistence', () => {
 
       // Assert: Should not restore expired data, use defaults
       service.filters$.subscribe(filters => {
-        expect(filters.manufacturer).toBeUndefined();
+        expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
 
       // Assert: Expired data should be cleared from localStorage
@@ -465,7 +465,7 @@ describe('VehicleStateService - Navigation & Persistence', () => {
 
       // Assert: Should use defaults
       service.filters$.subscribe(filters => {
-        expect(filters.manufacturer).toBeUndefined();
+        expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
 
       // Assert: Corrupt data should be cleared
@@ -488,7 +488,7 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       // Assert: Should handle gracefully (migration returns null currently)
       service.filters$.subscribe(filters => {
         // Current implementation ignores old versions
-        expect(filters.manufacturer).toBeUndefined();
+        expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
     }));
 
@@ -509,7 +509,7 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       // Assert: Should handle gracefully
       service.filters$.subscribe(filters => {
         // Migration returns null for unknown versions
-        expect(filters.manufacturer).toBeUndefined();
+        expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
     }));
 
@@ -541,7 +541,7 @@ describe('VehicleStateService - Navigation & Persistence', () => {
 
       // Assert: Should use defaults
       service.filters$.subscribe(filters => {
-        expect(filters.manufacturer).toBeUndefined();
+        expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
     }));
 
