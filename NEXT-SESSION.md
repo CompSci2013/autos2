@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-25 (End of Session 2 - Kubernetes Deployment Complete)
+**Last Updated**: 2025-10-25 (End of Session 3 - Phase 2.1 Complete + Kibana Documentation)
 
 ---
 
@@ -25,26 +25,29 @@ Please orient yourself by reading these key files:
 2. docs/design/improvement-roadmap.md - Phased improvement plan (currently on Phase 2)
 3. k8s/ - Kubernetes manifests (namespace, deployments, services, ingress)
 
-Session 2 Accomplishments:
-✅ Phase 1 (Critical Fixes) - COMPLETE
-  - Subscription cleanup with takeUntil pattern
-  - HTTP error interceptor with user notifications
-  - Global loading interceptor and spinner
-✅ Kubernetes Production Deployment - COMPLETE
-  - Production Dockerfiles created (multi-stage builds)
-  - All services deployed to k8s cluster
-  - Ingress configured with Traefik
-  - Application verified working at http://autos2.minilab
+Session 3 Accomplishments:
+✅ Phase 2.1 - Vehicle State Service - COMPLETE (TD-003)
+  - Created VehicleStateService with BehaviorSubject pattern
+  - Centralized state management for manufacturers, models, vehicles, filters
+  - localStorage persistence for search state
+  - Refactored DiscoverComponent to use state service
+  - Fixed initialization bug (change detection error)
+✅ Kibana Documentation - COMPLETE
+  - Created comprehensive kibana-reference.md guide
+  - Documented autos-unified index (793 docs, 171.15 KB)
+  - Visual walkthrough with 12 screenshot placeholders
+  - Updated CLAUDE.md with Kibana access info
 
-Next Task: Begin Phase 2 - State Management (Week 2)
+Next Task: Phase 2.2 - Migrate to Async Pipe Pattern (TD-004)
 
-Phase 2 Goals:
-- [ ] Create VehicleStateService with BehaviorSubject pattern (TD-003)
-- [ ] Migrate components to use state service instead of direct API calls
+Phase 2 Remaining Goals:
+- [x] Create VehicleStateService with BehaviorSubject pattern (TD-003) ✅
 - [ ] Migrate templates to async pipe pattern (TD-004)
+- [ ] Remove manual subscriptions from components
+- [ ] Enable OnPush change detection
 
-Please review the roadmap and help me implement Phase 2.1
-(Create Vehicle State Service) from docs/design/improvement-roadmap.md.
+Please review the roadmap and help me implement Phase 2.2
+(Migrate templates to async pipe) from docs/design/improvement-roadmap.md.
 
 Let me know when you're oriented and ready to begin.
 ```
@@ -105,7 +108,53 @@ Let me know when you're oriented and ready to begin.
 - dfebd03: Subscription cleanup
 - 1b86399: HTTP error and loading interceptors
 - 32ff742: Kubernetes deployment
-- 123c37a: Session documentation (pending)
+- c4b4a22: Session documentation
+
+### What Was Accomplished (Session 3 - 2025-10-25)
+
+**Phase 2.1 - Vehicle State Service (TD-003):**
+- ✅ Created VehicleStateService
+  - BehaviorSubject pattern for all vehicle-related state
+  - Manages manufacturers, models, vehicles, filters, pagination, loading
+  - Public observables (read-only) for components
+  - Methods: selectManufacturer(), selectModel(), updateFilters(), search(), changePage()
+  - localStorage persistence (saveState/restoreState)
+- ✅ Created interfaces
+  - VehicleSearchFilters interface (typed search parameters)
+  - Pagination interface
+- ✅ Refactored DiscoverComponent
+  - Now uses VehicleStateService instead of direct API calls
+  - Subscribes to state observables
+  - Simplified from ~165 lines to ~104 lines
+  - Removed complex state management logic
+- ✅ Fixed initialization bug
+  - Removed auto-search from service constructor
+  - Prevents NG09900 change detection error
+  - Component now triggers search in ngOnInit()
+
+**Kibana Documentation:**
+- ✅ Created comprehensive kibana-reference.md (650+ lines)
+  - Access URLs and deployment details
+  - Complete index mapping for autos-unified
+  - Field reference table (16 fields)
+  - Sample document structure
+  - Quick start guide
+  - Common Elasticsearch queries (8 examples)
+  - Troubleshooting section
+- ✅ Visual walkthrough with screenshots
+  - 12 screenshot placeholders created
+  - Step-by-step guide from home page to document inspection
+  - Screenshots directory with README
+- ✅ Updated CLAUDE.md (v1.3.0 → v1.4.0)
+  - Added Kibana URLs to Infrastructure section
+  - Added Kibana quick reference section
+  - Updated changelog
+
+**Git Commits:**
+- 981f490: Implement Phase 2.1 - Vehicle State Service
+- 247901c: Fix initialization error
+- 491e2ed: Add Kibana reference guide
+- d944e3a: Add visual walkthrough with screenshots
 
 ### Current State
 - **Production**: http://autos2.minilab (Kubernetes, 4 pods running)
@@ -118,17 +167,18 @@ Let me know when you're oriented and ready to begin.
 |----------|------|--------|--------|
 | ~~CRITICAL~~ | ~~Memory leaks~~ | ~~2 hrs~~ | ✅ COMPLETE |
 | ~~HIGH~~ | ~~No HTTP interceptors~~ | ~~4 hrs~~ | ✅ COMPLETE |
-| HIGH | No state management | 8 hrs | 🎯 NEXT |
-| HIGH | No async pipe usage | 4 hrs | 📋 Planned |
+| ~~HIGH~~ | ~~No state management~~ | ~~8 hrs~~ | ✅ COMPLETE |
+| HIGH | No async pipe usage | 4 hrs | 🎯 NEXT |
 | MEDIUM | No trackBy functions | 2 hrs | 📋 Planned |
 
-### Next Steps (Phase 2 - State Management)
-1. **Create VehicleStateService** (TD-003) - START HERE
-   - Implement BehaviorSubject pattern for manufacturers, models, vehicles
-   - Add state persistence to localStorage
-   - Handle loading state centrally
-2. Refactor components to use VehicleStateService
-3. Migrate templates to async pipe pattern (TD-004)
+### Next Steps (Phase 2.2 - Async Pipe Migration)
+1. **Migrate to Async Pipe** (TD-004) - START HERE
+   - Replace manual subscriptions with async pipe in templates
+   - Update component properties from values to observables
+   - Remove ngOnDestroy where async pipe manages subscriptions
+   - Test all data binding still works
+2. Enable OnPush change detection (after async pipe complete)
+3. Add trackBy functions for performance (Phase 4)
 
 ### Important Notes
 - **Container-based development**: All npm/ng commands run via `podman exec`
