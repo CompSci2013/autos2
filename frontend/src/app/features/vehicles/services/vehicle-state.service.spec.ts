@@ -919,9 +919,123 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       }).unsubscribe();
     }));
 
-    // Note: Backend API contract testing (year → year_min/year_max transformation)
-    // is verified via manual testing. Unit tests focus on state management.
-    // TODO: Add proper integration tests for API contract verification
+    it('should call backend API with year_min and year_max parameters', fakeAsync(() => {
+      // This test catches the bug from the screenshot where year filter shows 1990
+      // but results include 1960, 1962, 1965, 1968, 1970, etc.
+      //
+      // Root cause: Backend ignores 'year' parameter and only processes 'year_min'/'year_max'
+      // If this test fails, it means we're sending the wrong parameters to the backend.
+
+      // Arrange: Set up service with spies
+      vehicleApiSpy.getManufacturers.and.returnValue(of(mockManufacturers));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      // Initialize service
+      service.initialize({});
+      tick(100);
+
+      // Get reference to search spy
+      const searchSpy = vehicleApiSpy.searchVehicles;
+
+      // Subscribe to vehicles$ to activate the reactive search pipeline
+      const subscription = service.vehicles$.subscribe();
+      tick(100);
+
+      // Clear the initialization search call
+      searchSpy.calls.reset();
+
+      // Act: Set year filter to 1990 (like in the screenshot)
+      service.updateFilters({
+        manufacturer: null,
+        model: null,
+        body_class: null,
+        year: 1990
+      });
+      tick(150); // Wait for debounce (100ms) + buffer
+
+      // Assert: Backend API MUST be called with year_min and year_max
+      expect(searchSpy).toHaveBeenCalled();
+
+      const lastCall = searchSpy.calls.mostRecent();
+      const params = lastCall.args[0];
+
+      // Critical assertion: Backend receives year_min and year_max
+      expect(params.year_min).toBe(1990,
+        'Backend API must receive year_min parameter for filtering to work');
+      expect(params.year_max).toBe(1990,
+        'Backend API must receive year_max parameter for filtering to work');
+
+      // Critical assertion: 'year' parameter must NOT be sent
+      expect(params.year).toBeUndefined(
+        'Backend API should not receive "year" parameter as it only processes year_min/year_max');
+
+      subscription.unsubscribe();
+    }));
+
+    it('should transform different year values correctly', fakeAsync(() => {
+      // Test multiple year values to ensure transformation works for any year
+
+      vehicleApiSpy.getManufacturers.and.returnValue(of(mockManufacturers));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      service.initialize({});
+      const subscription = service.vehicles$.subscribe();
+      tick(100);
+
+      const searchSpy = vehicleApiSpy.searchVehicles;
+
+      // Test year 2021
+      searchSpy.calls.reset();
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2021 });
+      tick(150);
+
+      let params = searchSpy.calls.mostRecent().args[0];
+      expect(params.year_min).toBe(2021);
+      expect(params.year_max).toBe(2021);
+      expect(params.year).toBeUndefined();
+
+      // Test year 1950
+      searchSpy.calls.reset();
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 1950 });
+      tick(150);
+
+      params = searchSpy.calls.mostRecent().args[0];
+      expect(params.year_min).toBe(1950);
+      expect(params.year_max).toBe(1950);
+      expect(params.year).toBeUndefined();
+
+      subscription.unsubscribe();
+    }));
+
+    it('should not send year parameters when year is null', fakeAsync(() => {
+      // When year filter is cleared, ensure no year parameters are sent
+
+      vehicleApiSpy.getManufacturers.and.returnValue(of(mockManufacturers));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      service.initialize({});
+      const subscription = service.vehicles$.subscribe();
+      tick(100);
+
+      const searchSpy = vehicleApiSpy.searchVehicles;
+      searchSpy.calls.reset();
+
+      // Set year to null (cleared filter)
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: null });
+      tick(150);
+
+      const params = searchSpy.calls.mostRecent().args[0];
+
+      // When year is null, no year-related parameters should be sent
+      expect(params.year_min).toBeUndefined();
+      expect(params.year_max).toBeUndefined();
+      expect(params.year).toBeUndefined();
+
+      subscription.unsubscribe();
+    }));
 
     it('should persist year filter in cache for URL sync', fakeAsync(() => {
       // Act: Set year filter
