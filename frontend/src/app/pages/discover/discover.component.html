@@ -18,7 +18,7 @@
                 <nz-option
                   *ngFor="let mfr of manufacturers$ | async"
                   [nzValue]="mfr.name"
-                  [nzLabel]="mfr.name + ' (' + mfr.count + ')'">
+                  [nzLabel]="mfr.name + ' (' + mfr.vehicle_count + ')'">
                 </nz-option>
               </nz-select>
             </nz-form-control>
@@ -40,7 +40,7 @@
                 <nz-option
                   *ngFor="let model of models$ | async"
                   [nzValue]="model.name"
-                  [nzLabel]="model.name + ' (' + model.count + ')'">
+                  [nzLabel]="model.name + ' (' + model.vehicle_count + ')'">
                 </nz-option>
               </nz-select>
             </nz-form-control>
@@ -96,26 +96,20 @@
       [nzPageSizeOptions]="[10, 20, 50, 100]">
       <thead>
         <tr>
-          <th>VIN</th>
+          <th>Vehicle ID</th>
           <th>Year</th>
-          <th>Make</th>
+          <th>Manufacturer</th>
           <th>Model</th>
           <th>Body Class</th>
-          <th>Body Style</th>
-          <th>Engine</th>
-          <th>Drive Type</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let vehicle of vehicleTable.data">
-          <td>{{ vehicle.vin }}</td>
+          <td>{{ vehicle.vehicle_id }}</td>
           <td>{{ vehicle.year }}</td>
-          <td>{{ vehicle.make }}</td>
+          <td>{{ vehicle.manufacturer }}</td>
           <td>{{ vehicle.model }}</td>
           <td>{{ vehicle.body_class || '-' }}</td>
-          <td>{{ vehicle.body_style || '-' }}</td>
-          <td>{{ vehicle.engine_model || '-' }}</td>
-          <td>{{ vehicle.drive_type || '-' }}</td>
         </tr>
       </tbody>
     </nz-table>
