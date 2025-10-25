@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-25 (End of Session 4 - Phase 2.2 Complete)
+**Last Updated**: 2025-10-25 (Session 5 Complete - NG0900 Fixed, Manufacturer Filtering Working)
 
 ---
 
@@ -13,48 +13,41 @@ Project: Autos2 - Vehicle database application (Angular 14 + Node.js + Elasticse
 Location: /home/odin/projects/autos2
 Git Branch: main
 Production URL: http://autos2.minilab
+Dev URL: http://localhost:4201
 
-Application Status: CODE READY - PENDING DEPLOYMENT ⚠️
-- Frontend: Built but not yet deployed (image: localhost/autos2-frontend:prod)
-- Backend API: http://autos2.minilab/api/v1 (2 replicas, Node.js)
-- Namespace: autos2
-- Check pods: kubectl get pods -n autos2
+Application Status: ✅ DEVELOPMENT WORKING - Ready for Browse-First Pattern
+- Production: Running at http://autos2.minilab (⚠️ needs deployment - has old NG0900 errors)
+- Development: http://localhost:4201 (✅ All fixes working - no errors)
+- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy)
+- Dev Container: autos2-frontend-dev (running with /home/odin/projects/autos2/frontend:/app:z)
 
-⚠️ DEPLOYMENT NEEDED:
-The frontend image has been built with Phase 2.2 changes but needs deployment:
-1. Import image: sudo k3s ctr images import /tmp/autos2-frontend.tar
-2. Restart pods: kubectl rollout restart deployment/autos2-frontend -n autos2
-3. Verify: kubectl get pods -n autos2 && curl http://autos2.minilab
+✅ SESSION 5 COMPLETED:
+- Fixed all NG0900/NG0100 errors (ExpressionChangedAfterItHasBeenCheckedError)
+- Fixed all API response type mismatches (manufacturers, models, vehicles)
+- Fixed interface field name mismatches (vehicle_id, manufacturer, vehicle_count, etc.)
+- Fixed query parameter names (manufacturer → manufacturers plural)
+- Configured English locale for NG-ZORRO (eliminates Chinese text)
+- Created proxy configuration for dev server
+- Manufacturer filtering working correctly (tested: Buick shows 27 vehicles)
+- All API calls returning 200/304 status codes
+- Dev environment with HMR working properly
 
-Please orient yourself by reading these key files:
-1. docs/design/angular-architecture.md - Architecture patterns and best practices
-2. docs/design/improvement-roadmap.md - Phased improvement plan (currently on Phase 2)
-3. k8s/ - Kubernetes manifests (namespace, deployments, services, ingress)
+🎯 PRIMARY GOAL FOR SESSION 6:
+Implement "browse-first" filter pattern:
+- Table should show initial 20 vehicles WITHOUT requiring manufacturer selection
+- Currently table is empty until user selects a manufacturer
+- Auto-trigger search on page load with empty filters
+- Add "Showing X-Y of Z vehicles" count display
+- Test filter winnowing (select Ford → winnows to Ford vehicles only)
 
-Session 4 Accomplishments:
-✅ Phase 2.2 - Async Pipe Migration - COMPLETE (TD-004)
-  - Migrated HomeComponent to 100% async pipe usage
-  - Migrated DiscoverComponent to hybrid async pipe pattern
-  - Removed 13 manual subscriptions across both components
-  - HomeComponent: 62% code reduction (40 → 15 lines)
-  - DiscoverComponent: Simplified from 7 to 1 subscription
-  - Templates updated with null-safe async pipe patterns
-  - TypeScript compilation successful, bundle size: 1.28 MB
+Please orient yourself by reading:
+1. frontend/src/app/features/vehicles/services/vehicle-state.service.ts - State management
+2. frontend/src/app/pages/discover/discover.component.ts - Component initialization
+3. NEXT-SESSION.md Session 5 section - See all fixes applied
 
-Next Task: Deploy Phase 2.2 changes and optionally continue to Phase 2.3
-
-Phase 2 Status:
-- [x] Create VehicleStateService with BehaviorSubject pattern (TD-003) ✅
-- [x] Migrate templates to async pipe pattern (TD-004) ✅
-- [x] Remove manual subscriptions from components (TD-004) ✅
-- [ ] Enable OnPush change detection (optional - Phase 2.3)
-
-Phase 2 is essentially COMPLETE! You can either:
-1. Deploy and test Phase 2.2 changes
-2. Continue to Phase 2.3 (OnPush change detection)
-3. Move to Phase 3 (Type Safety improvements)
-
-Let me know what you'd like to focus on next!
+SECONDARY GOALS:
+- Deploy Session 5 fixes to production (build + k8s deployment)
+- Consider URL parameter sync for bookmarking (like old app)
 ```
 
 ---
@@ -197,12 +190,114 @@ Let me know what you'd like to focus on next!
 **Git Commits:**
 - 42529a5: Implement Phase 2.2 - Migrate to Async Pipe Pattern (TD-004)
 
+### What Was Accomplished (Session 5 - 2025-10-25)
+
+**Phase 2.2 Production Deployment & NG0900 Error Discovery:**
+- ❌ Deployed Phase 2.2 to production, discovered NG0900 errors on Discover page
+  - ExpressionChangedAfterItHasBeenCheckedError preventing UI from rendering
+  - Multiple errors in console related to loading$, manufacturers$, models$ observables
+- ⚠️ Made 4 failed attempts to fix by deploying to k8s repeatedly (wrong approach)
+  - User feedback: Redirected to use proper dev workflow with volume mounts
+  - Learned: Backend is immutable (k8s), frontend developed in dev container with HMR
+
+**Development Environment Setup:**
+- ✅ Set up proper dev container workflow
+  - Started dev container with volume mount: /home/odin/projects/autos2/frontend:/app:z
+  - Dev server running on port 4201 (port 4200 is old working app for comparison)
+  - HMR provides instant feedback (edit → save → reload)
+- ✅ Created proxy configuration
+  - frontend/proxy.conf.json forwards /api → http://autos2.minilab/api
+  - Dev server configured with --proxy-config flag
+  - Enables API calls to work during development
+
+**NG0900/NG0100 Error Fixes (ExpressionChangedAfterItHasBeenCheckedError):**
+- ✅ Fixed LoadingService NG0100 errors
+  - Wrapped show() and hide() BehaviorSubject updates in setTimeout()
+  - Prevents state changes during change detection cycle
+- ✅ Fixed VehicleStateService NG0900 errors
+  - Created updateState() helper method with setTimeout() wrapper
+  - All 15+ BehaviorSubject.next() calls now wrapped in setTimeout()
+  - Moved state updates outside Angular's change detection cycle
+- ✅ Fixed component initialization
+  - Removed initialize() call from VehicleStateService constructor
+  - Made initialize() public method called from DiscoverComponent.ngAfterViewInit()
+  - Ensures change detection completes before state updates begin
+
+**API Response Type Mismatches Fixed:**
+- ✅ Manufacturers endpoint mismatch
+  - Backend returns: `{manufacturers: [...], total: number}`
+  - Frontend expected: `Manufacturer[]`
+  - Added RxJS map() to extract manufacturers array
+- ✅ Models endpoint mismatch
+  - Backend returns: `{manufacturer: string, models: [...], total: number}`
+  - Frontend expected: `Model[]`
+  - Added RxJS map() to extract models array
+- ✅ Vehicles endpoint mismatch
+  - Backend returns: `{vehicles: [...], pagination: {...}}`
+  - Frontend expected: `{data: [...], pagination: {...}}`
+  - Added RxJS map() to transform response structure
+
+**Interface & Field Name Fixes:**
+- ✅ Updated Vehicle interface to match backend
+  - Changed vin → vehicle_id
+  - Changed make → manufacturer
+  - Added data_source, ingested_at fields
+- ✅ Updated Manufacturer interface
+  - Changed count → vehicle_count and model_count
+- ✅ Updated Model interface
+  - Changed count → vehicle_count
+  - Added year_range: {min, max} structure
+- ✅ Updated template field references
+  - discover.component.html now uses correct field names
+  - Simplified table to show: Vehicle ID, Year, Manufacturer, Model, Body Class
+
+**Query Parameter Fixes:**
+- ✅ Fixed manufacturer filter parameter
+  - Backend expects: manufacturers (plural, as array)
+  - Frontend was sending: manufacturer (singular)
+  - Updated VehicleService to use correct parameter names
+  - Filter now works correctly (e.g., "Buick" shows 27 vehicles, not all 793)
+
+**Internationalization:**
+- ✅ Configured English locale (NG-ZORRO)
+  - Added NZ_I18N provider with en_US value
+  - Eliminates Chinese text like "暂无数据"
+  - Now shows "No Data", "Select manufacturer", etc. in English
+
+**Testing & Verification:**
+- ✅ All NG0900/NG0100 errors eliminated
+- ✅ Manufacturer dropdown populates correctly (70 manufacturers)
+- ✅ Vehicle table displays data correctly
+- ✅ Manufacturer filtering works (tested with Buick: 27 vehicles)
+- ✅ Pagination displays correctly
+- ✅ All API calls return 200/304 status codes
+- ✅ English UI throughout the application
+
+**Git Commits:**
+- (Pending) fix: Resolve NG0900 errors with setTimeout wrapper pattern
+- (Pending) fix: Correct API response type mismatches with RxJS map()
+- (Pending) fix: Update interfaces to match backend field names
+- (Pending) fix: Correct query parameter names (manufacturers plural)
+- (Pending) feat: Add proxy configuration for dev server
+- (Pending) feat: Configure English locale for NG-ZORRO
+
+**Files Modified:**
+- frontend/src/app/app.module.ts (added NZ_I18N, en_US locale configuration)
+- frontend/src/app/core/services/loading.service.ts (setTimeout wrapper)
+- frontend/src/app/features/vehicles/services/vehicle-state.service.ts (updateState helper, setTimeout)
+- frontend/src/app/pages/discover/discover.component.ts (moved initialization)
+- frontend/src/app/pages/discover/discover.component.html (field name updates, simplified columns)
+- frontend/src/app/services/vehicle.service.ts (RxJS map transforms, parameter fixes)
+- frontend/proxy.conf.json (created for API proxying)
+
 ### Current State
-- **Production**: http://autos2.minilab (⚠️ Running old code, needs deployment)
-- **Code**: Phase 2.2 complete, built and ready for deployment
-- **Frontend Image**: Built as localhost/autos2-frontend:prod, saved to /tmp/autos2-frontend.tar
-- **Git**: All work committed to main branch (11 commits ahead of gitlab/main)
-- **Documentation**: Up-to-date
+- **Production**: http://autos2.minilab (⚠️ Needs deployment - has old code with NG0900 errors)
+- **Development**: http://localhost:4201 (✅ WORKING - all fixes verified)
+- **Dev Container**: autos2-frontend-dev (running, volume-mounted at /app)
+- **Code Status**: ✅ All NG0900 errors fixed, manufacturer filtering working
+- **Proxy Status**: ✅ Working correctly (forwards /api to backend)
+- **Git**: Ready to commit Session 5 fixes (7 modified files + 1 new file)
+- **Documentation**: NEXT-SESSION.md updated with Session 5 completion
 
 ### Technical Debt Remaining
 | Priority | Item | Effort | Status |
@@ -215,31 +310,35 @@ Let me know what you'd like to focus on next!
 | LOW | No OnPush change detection | 2 hrs | 📋 Optional |
 
 ### Next Steps
-1. **Deploy Phase 2.2 changes to production**
-   ```bash
-   # Import the built image to k3s
-   sudo k3s ctr images import /tmp/autos2-frontend.tar
 
-   # Restart frontend pods to pick up new image
-   kubectl rollout restart deployment/autos2-frontend -n autos2
+**IMMEDIATE (Session 6):**
+1. **Implement browse-first pattern** (PRIMARY GOAL from Session 5)
+   - Table should show initial 20 vehicles WITHOUT requiring manufacturer selection
+   - Currently table is empty until user selects a manufacturer
+   - Auto-trigger search on page load with empty filters
+   - Add "Showing X-Y of Z vehicles" count display
+   - Test filter winnowing behavior (select Ford → see only Ford vehicles)
 
-   # Verify deployment
-   kubectl get pods -n autos2
-   kubectl logs -f deployment/autos2-frontend -n autos2
-   curl http://autos2.minilab
-   ```
+2. **Deploy Session 5 fixes to production**
+   - Build new frontend Docker image with all fixes
+   - Deploy to k8s cluster
+   - Verify NG0900 errors are resolved in production
+   - Verify manufacturer filtering works in production
 
-2. **Test the application**
-   - Home page displays statistics correctly
-   - Discover page loads and displays vehicle list
-   - Manufacturer/model dropdowns populate correctly
-   - Search and filtering work as expected
-   - Pagination works correctly
-   - No console errors related to subscriptions
+3. **URL parameter sync** (nice-to-have)
+   - Old app had URL params like: `?manufacturers=Buick&page=1&size=20`
+   - Enables bookmarking and sharing filtered views
+   - Sync Angular router params with VehicleStateService
 
-3. **Optional: Continue to Phase 2.3** (OnPush change detection)
-   - Or move to Phase 3 (Type Safety improvements)
-   - Or move to Phase 4 (Performance - trackBy functions)
+4. **Consider pagination improvements**
+   - Current paginator shows page selector
+   - Verify it works correctly with different manufacturers
+   - Test page size changes (10, 20, 50, 100)
+
+**FUTURE (Phase 2 completion):**
+- Phase 2.3: OnPush change detection (optional)
+- Phase 3: Type Safety improvements
+- Phase 4: Performance optimizations (trackBy functions)
 
 ### Important Notes
 - **Container-based development**: All npm/ng commands run via `podman exec`
