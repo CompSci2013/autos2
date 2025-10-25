@@ -93,6 +93,7 @@
       #vehicleTable
       [nzData]="(vehicles$ | async) || []"
       [nzLoading]="(loading$ | async) || false"
+      [nzFrontPagination]="false"
       [nzPageSize]="(pagination$ | async)?.limit || 20"
       [nzTotal]="(pagination$ | async)?.total || 0"
       [nzPageIndex]="(pagination$ | async)?.page || 1"

@@ -40,7 +40,7 @@ spec:
         - name: API_VERSION
           value: "v1"
         - name: CORS_ORIGIN
-          value: "http://autos2.minilab"
+          value: "*"
         livenessProbe:
           httpGet:
             path: /api/v1/health

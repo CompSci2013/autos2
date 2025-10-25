@@ -158,14 +158,18 @@ export class VehicleStateService {
 
   changePage(page: number): void {
     const pagination = this.paginationSubject.value;
-    this.updateState(this.paginationSubject, { ...pagination, page });
-    this.search();
+    const newPagination = { ...pagination, page };
+    this.updateState(this.paginationSubject, newPagination);
+    // Call search after state update completes
+    setTimeout(() => this.search(), 0);
   }
 
   changePageSize(limit: number): void {
     const pagination = this.paginationSubject.value;
-    this.updateState(this.paginationSubject, { ...pagination, limit, page: 1 });
-    this.search();
+    const newPagination = { ...pagination, limit, page: 1 };
+    this.updateState(this.paginationSubject, newPagination);
+    // Call search after state update completes
+    setTimeout(() => this.search(), 0);
   }
 
   clearFilters(): void {

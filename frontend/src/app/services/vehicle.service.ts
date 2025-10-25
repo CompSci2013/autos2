@@ -91,7 +91,15 @@ export class VehicleService {
     if (filters.limit) params = params.set('limit', filters.limit);
 
     return this.http.get<{ vehicles: Vehicle[]; pagination: any }>(`${this.apiUrl}/vehicles`, { params })
-      .pipe(map(response => ({ data: response.vehicles, pagination: response.pagination })));
+      .pipe(map(response => ({
+        data: response.vehicles,
+        pagination: {
+          page: response.pagination.page,
+          limit: response.pagination.limit,
+          total: response.pagination.total,
+          totalPages: response.pagination.total_pages  // Map snake_case to camelCase
+        }
+      })));
   }
 
   getFilters(manufacturer?: string, model?: string): Observable<Filters> {
