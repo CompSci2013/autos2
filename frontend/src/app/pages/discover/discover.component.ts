@@ -1,6 +1,7 @@
-import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, Subject, combineLatest } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
 import {
   Manufacturer,
   Model,
@@ -15,7 +16,7 @@ import { VehicleSearchFilters, Pagination } from '../../features/vehicles/models
   templateUrl: './discover.component.html',
   styleUrls: ['./discover.component.scss']
 })
-export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
+export class DiscoverComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   // Expose observables directly - async pipe handles subscriptions
@@ -34,22 +35,50 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
     year: null
   };
 
-  constructor(private state: VehicleStateService) { }
+  constructor(
+    private state: VehicleStateService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
 
   ngOnInit(): void {
+    // Initialize from URL params ONCE on page load
+    const initialParams = this.route.snapshot.queryParams;
+    this.state.initialize(initialParams);
+
     // Sync local searchFilters with state (needed for ngModel binding)
     this.state.filters$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(filters => this.searchFilters = filters);
-  }
+      .subscribe(filters => {
+        this.searchFilters = { ...filters };
+      });
 
-  ngAfterViewInit(): void {
-    // Initialize state service and trigger search after view initialization
-    // This ensures change detection has completed before state updates
-    setTimeout(() => {
-      this.state.initialize();
-      this.state.search();
-    }, 0);
+    // Subscribe to state changes to update URL
+    combineLatest([
+      this.state.filters$,
+      this.state.pagination$
+    ])
+      .pipe(
+        takeUntil(this.destroy$),
+        debounceTime(300), // Debounce to avoid excessive URL updates
+        distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr))
+      )
+      .subscribe(([filters, pagination]) => {
+        this.updateUrlParams(filters, pagination);
+      });
+
+    // Handle browser back/forward navigation
+    // Skip first emission (initial load) - after that, URL changes are browser navigation
+    this.route.queryParams
+      .pipe(
+        skip(1), // Skip initial emission (we already initialized above)
+        takeUntil(this.destroy$),
+        distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr))
+      )
+      .subscribe(params => {
+        // Browser back/forward detected - re-initialize from URL
+        this.state.initialize(params);
+      });
   }
 
   onManufacturerChange(): void {
@@ -57,11 +86,8 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onSearchChange(): void {
+    // Called when model or body_class dropdowns change
     this.state.updateFilters(this.searchFilters);
-  }
-
-  searchVehicles(): void {
-    this.state.search(this.searchFilters);
   }
 
   clearFilters(): void {
@@ -84,6 +110,41 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
   getEndRecord(pagination: Pagination): number {
     const end = pagination.page * pagination.limit;
     return Math.min(end, pagination.total);
+  }
+
+  private updateUrlParams(filters: VehicleSearchFilters, pagination: Pagination): void {
+    // Build query params object
+    const queryParams: any = {};
+
+    // Add filter params (only if they have values)
+    if (filters.manufacturer) {
+      queryParams.manufacturer = filters.manufacturer;
+    }
+    if (filters.model) {
+      queryParams.model = filters.model;
+    }
+    if (filters.body_class) {
+      queryParams.body_class = filters.body_class;
+    }
+    if (filters.year) {
+      queryParams.year = filters.year;
+    }
+
+    // Add pagination params (only if different from defaults)
+    if (pagination.page !== 1) {
+      queryParams.page = pagination.page;
+    }
+    if (pagination.limit !== 20) {
+      queryParams.limit = pagination.limit;
+    }
+
+    // Update URL without reloading the page
+    // Don't use 'merge' - replace all params to properly clear removed ones
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: queryParams,
+      replaceUrl: false // Use false to enable back/forward navigation
+    });
   }
 
   ngOnDestroy(): void {

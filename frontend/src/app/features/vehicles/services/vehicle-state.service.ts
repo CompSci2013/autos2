@@ -1,6 +1,17 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { finalize, map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, Subject, merge, combineLatest, EMPTY, of } from 'rxjs';
+import {
+  map,
+  switchMap,
+  startWith,
+  shareReplay,
+  catchError,
+  distinctUntilChanged,
+  tap,
+  debounceTime,
+  scan,
+  take
+} from 'rxjs/operators';
 import {
   VehicleService,
   Manufacturer,
@@ -10,218 +21,527 @@ import {
 } from '../../../services/vehicle.service';
 import { VehicleSearchFilters, Pagination } from '../models/vehicle.model';
 
+interface VehicleState {
+  filters: VehicleSearchFilters;
+  pagination: Pagination;
+}
+
+interface SearchResult {
+  vehicles: Vehicle[];
+  pagination: Pagination;
+}
+
+interface StoredState {
+  version: string;
+  filters: VehicleSearchFilters;
+  pagination: {
+    page: number;
+    limit: number;
+  };
+  timestamp: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class VehicleStateService {
-  // Private state subjects
-  private manufacturersSubject = new BehaviorSubject<Manufacturer[]>([]);
-  private modelsSubject = new BehaviorSubject<Model[]>([]);
-  private vehiclesSubject = new BehaviorSubject<Vehicle[]>([]);
-  private filtersSubject = new BehaviorSubject<VehicleSearchFilters>({});
-  private availableFiltersSubject = new BehaviorSubject<Filters | null>(null);
-  private loadingSubject = new BehaviorSubject<boolean>(false);
-  private paginationSubject = new BehaviorSubject<Pagination>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0
-  });
+  // ============================================================================
+  // LOCALSTORAGE CONFIGURATION - Professional pattern for state persistence
+  // ============================================================================
 
-  // Public observables (read-only)
-  manufacturers$ = this.manufacturersSubject.asObservable();
-  models$ = this.modelsSubject.asObservable();
-  vehicles$ = this.vehiclesSubject.asObservable();
-  filters$ = this.filtersSubject.asObservable();
-  availableFilters$ = this.availableFiltersSubject.asObservable();
-  loading$ = this.loadingSubject.asObservable();
-  pagination$ = this.paginationSubject.asObservable();
+  private readonly STORAGE_KEY = 'autos2.discover.state';
+  private readonly STORAGE_VERSION = '1.0';
+  private readonly MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-  // Combined selectors
-  hasResults$ = this.vehicles$.pipe(
-    map(vehicles => vehicles.length > 0)
-  );
+  // ============================================================================
+  // ACTIONS (Inputs) - Components dispatch these to trigger state changes
+  // ============================================================================
+
+  private readonly initializeAction$ = new Subject<VehicleSearchFilters>();
+  private readonly selectManufacturerAction$ = new Subject<string | null>();
+  private readonly selectModelAction$ = new Subject<string | null>();
+  private readonly updateFiltersAction$ = new Subject<Partial<VehicleSearchFilters>>();
+  private readonly changePageAction$ = new Subject<number>();
+  private readonly changePageSizeAction$ = new Subject<number>();
+  private readonly clearFiltersAction$ = new Subject<void>();
+
+  // ============================================================================
+  // STATE STREAMS (Outputs) - Components subscribe to these
+  // ============================================================================
+
+  // Core state: filters and pagination
+  readonly filters$: Observable<VehicleSearchFilters>;
+  readonly pagination$: Observable<Pagination>;
+
+  // Derived state: loaded from API based on filters
+  readonly manufacturers$: Observable<Manufacturer[]>;
+  readonly models$: Observable<Model[]>;
+  readonly vehicles$: Observable<Vehicle[]>;
+  readonly availableFilters$: Observable<Filters | null>;
+  readonly loading$: Observable<boolean>;
+
+  // Computed state
+  readonly hasResults$: Observable<boolean>;
+
+  // Cache current values for synchronous access
+  private currentFilters: VehicleSearchFilters = {};
+  private currentPagination: Pagination = { page: 1, limit: 20, total: 0, totalPages: 0 };
 
   constructor(private vehicleApi: VehicleService) {
-    // Don't initialize in constructor to avoid NG0900 errors
-    // Component will call initialize() explicitly when ready
-  }
+    // ============================================================================
+    // FILTERS STATE - Merge all filter-changing actions
+    // ============================================================================
 
-  // Helper method to update state outside change detection cycle
-  private updateState<T>(subject: BehaviorSubject<T>, value: T): void {
-    setTimeout(() => subject.next(value), 0);
-  }
+    this.filters$ = merge(
+      // Initialize with params from URL
+      this.initializeAction$,
 
-  initialize(): void {
-    // Load manufacturers on service creation
-    this.loadManufacturers();
+      // Select manufacturer - resets model
+      this.selectManufacturerAction$.pipe(
+        map(manufacturer => ({ manufacturer, model: null }))
+      ),
 
-    // Load available filters
-    this.loadAvailableFilters();
+      // Select model
+      this.selectModelAction$.pipe(
+        map(model => ({ model }))
+      ),
 
-    // Restore state from localStorage
-    this.restoreState();
+      // Update filters (partial update)
+      this.updateFiltersAction$,
 
-    // Don't auto-trigger search - let the component decide when to search
-    // This prevents change detection issues during initialization
-  }
+      // Clear filters - emit special marker
+      this.clearFiltersAction$.pipe(
+        map(() => ({ _clear: true } as any))
+      )
+    ).pipe(
+      // Start with empty filters (browse-first pattern)
+      startWith({} as VehicleSearchFilters),
+      // Accumulate filter changes
+      scan((currentFilters, update: any) => {
+        // Check if this is a clear action
+        if (update._clear) {
+          return {} as VehicleSearchFilters;
+        }
 
-  loadManufacturers(): void {
-    this.vehicleApi.getManufacturers().subscribe({
-      next: (data) => this.updateState(this.manufacturersSubject, data),
-      error: (error) => console.error('Error loading manufacturers:', error)
-    });
-  }
+        // If manufacturer changes (and model not provided), clear model
+        // This handles user selecting new manufacturer, but preserves model during initialization
+        if ('manufacturer' in update &&
+            update.manufacturer !== currentFilters.manufacturer &&
+            !('model' in update)) {
+          return { ...currentFilters, ...update, model: null };
+        }
+        return { ...currentFilters, ...update };
+      }, {} as VehicleSearchFilters),
+      // Only emit when filters actually change
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      // Share to avoid multiple executions (refCount false keeps it hot for auto-save)
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
 
-  loadAvailableFilters(manufacturer?: string, model?: string): void {
-    this.vehicleApi.getFilters(manufacturer, model).subscribe({
-      next: (data) => this.updateState(this.availableFiltersSubject, data),
-      error: (error) => console.error('Error loading filters:', error)
-    });
-  }
+    // ============================================================================
+    // PAGINATION STATE - Merge all pagination actions
+    // ============================================================================
 
-  selectManufacturer(name: string | null): void {
-    const currentFilters = this.filtersSubject.value;
-    const newFilters: VehicleSearchFilters = {
-      ...currentFilters,
-      manufacturer: name,
-      model: null  // Reset model when manufacturer changes
+    // Explicit triggers for pagination reset (USER actions only, not initialization)
+    const resetPaginationTriggers$ = merge(
+      this.selectManufacturerAction$,
+      this.selectModelAction$,
+      this.updateFiltersAction$,
+      this.clearFiltersAction$
+    );
+
+    const paginationChanges$ = merge(
+      // Change page
+      this.changePageAction$.pipe(
+        map(page => ({ page }))
+      ),
+
+      // Change page size - reset to page 1
+      this.changePageSizeAction$.pipe(
+        map(limit => ({ limit, page: 1 }))
+      ),
+
+      // Reset to page 1 when USER changes filters (not during initialization)
+      resetPaginationTriggers$.pipe(
+        map(() => ({ page: 1 }))
+      )
+    );
+
+    // Pagination state with defaults
+    const initialPagination: Pagination = {
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0
     };
 
-    this.updateState(this.filtersSubject, newFilters);
-    this.updateState(this.modelsSubject, []);  // Clear models
+    // Client-side pagination state (from user actions)
+    const clientPagination$ = paginationChanges$.pipe(
+      startWith(initialPagination),
+      scan((current, change) => ({ ...current, ...change }), initialPagination),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
 
-    if (name) {
-      // Load models for selected manufacturer
-      this.vehicleApi.getModels(name).subscribe({
-        next: (data) => this.updateState(this.modelsSubject, data),
-        error: (error) => console.error('Error loading models:', error)
-      });
+    // ============================================================================
+    // LOADING STATE - Track when search is in progress
+    // ============================================================================
 
-      // Load filters for selected manufacturer
-      this.loadAvailableFilters(name);
-    } else {
-      // Load all filters
-      this.loadAvailableFilters();
-    }
+    const loadingStart$ = new Subject<boolean>();
+    const loadingEnd$ = new Subject<boolean>();
 
-    this.search(newFilters);
-  }
+    this.loading$ = merge(
+      loadingStart$,
+      loadingEnd$
+    ).pipe(
+      startWith(false),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
 
-  selectModel(name: string | null): void {
-    const currentFilters = this.filtersSubject.value;
-    const newFilters: VehicleSearchFilters = { ...currentFilters, model: name };
+    // ============================================================================
+    // SEARCH EFFECT - Auto-trigger search when filters/pagination change
+    // ============================================================================
 
-    this.updateState(this.filtersSubject, newFilters);
-    this.search(newFilters);
-  }
+    const searchTrigger$ = combineLatest([
+      this.filters$,
+      clientPagination$  // Use client pagination for triggering searches
+    ]).pipe(
+      debounceTime(100), // Small debounce to batch rapid changes
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+    );
 
-  updateFilters(filters: Partial<VehicleSearchFilters>): void {
-    const currentFilters = this.filtersSubject.value;
-    const newFilters: VehicleSearchFilters = { ...currentFilters, ...filters };
+    const searchResult$ = searchTrigger$.pipe(
+      tap(() => loadingStart$.next(true)),
+      switchMap(([filters, pagination]) => {
+        const params = {
+          ...filters,
+          page: pagination.page,
+          limit: pagination.limit
+        };
 
-    this.updateState(this.filtersSubject, newFilters);
-
-    // Reset to page 1 when filters change
-    const currentPagination = this.paginationSubject.value;
-    this.updateState(this.paginationSubject, { ...currentPagination, page: 1 });
-
-    this.search(newFilters);
-  }
-
-  search(filters?: VehicleSearchFilters): void {
-    const searchFilters = filters || this.filtersSubject.value;
-    const pagination = this.paginationSubject.value;
-
-    const params = {
-      ...searchFilters,
-      page: pagination.page,
-      limit: pagination.limit
-    };
-
-    this.updateState(this.loadingSubject, true);
-
-    this.vehicleApi.searchVehicles(params).pipe(
-      finalize(() => this.updateState(this.loadingSubject, false))
-    ).subscribe({
-      next: (response) => {
-        this.updateState(this.vehiclesSubject, response.data);
-        this.updateState(this.paginationSubject, response.pagination);
-        this.saveState();
-      },
-      error: (error) => {
-        console.error('Error searching vehicles:', error);
-        this.updateState(this.vehiclesSubject, []);
-      }
-    });
-  }
-
-  changePage(page: number): void {
-    const pagination = this.paginationSubject.value;
-    const newPagination = { ...pagination, page };
-    this.updateState(this.paginationSubject, newPagination);
-    // Call search after state update completes
-    setTimeout(() => this.search(), 0);
-  }
-
-  changePageSize(limit: number): void {
-    const pagination = this.paginationSubject.value;
-    const newPagination = { ...pagination, limit, page: 1 };
-    this.updateState(this.paginationSubject, newPagination);
-    // Call search after state update completes
-    setTimeout(() => this.search(), 0);
-  }
-
-  clearFilters(): void {
-    this.updateState(this.filtersSubject, {});
-    this.updateState(this.modelsSubject, []);
-    this.loadAvailableFilters();
-
-    // Reset pagination
-    const currentPagination = this.paginationSubject.value;
-    this.updateState(this.paginationSubject, { ...currentPagination, page: 1 });
-
-    this.search({});
-  }
-
-  private saveState(): void {
-    const state = {
-      filters: this.filtersSubject.value,
-      pagination: this.paginationSubject.value
-    };
-    try {
-      localStorage.setItem('vehicleSearchState', JSON.stringify(state));
-    } catch (error) {
-      console.error('Error saving state to localStorage:', error);
-    }
-  }
-
-  private restoreState(): void {
-    try {
-      const saved = localStorage.getItem('vehicleSearchState');
-      if (saved) {
-        const state = JSON.parse(saved);
-
-        if (state.filters) {
-          this.updateState(this.filtersSubject, state.filters);
-
-          // If manufacturer was selected, load its models
-          if (state.filters.manufacturer) {
-            this.vehicleApi.getModels(state.filters.manufacturer).subscribe({
-              next: (data) => this.updateState(this.modelsSubject, data),
-              error: (error) => console.error('Error loading models:', error)
+        return this.vehicleApi.searchVehicles(params).pipe(
+          map(response => ({
+            vehicles: response.data,
+            pagination: response.pagination
+          })),
+          catchError(error => {
+            console.error('Error searching vehicles:', error);
+            return of({
+              vehicles: [],
+              pagination: initialPagination
             });
+          }),
+          tap(() => loadingEnd$.next(false))
+        );
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
 
-            this.loadAvailableFilters(state.filters.manufacturer, state.filters.model);
-          }
+    // Extract vehicles from search results
+    this.vehicles$ = searchResult$.pipe(
+      map(result => result.vehicles),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    // Extract server pagination from search results (has total, totalPages)
+    const serverPagination$ = searchResult$.pipe(
+      map(result => result.pagination)
+    );
+
+    // Merge client pagination (page, limit) with server pagination (total, totalPages)
+    this.pagination$ = merge(
+      clientPagination$,
+      serverPagination$
+    ).pipe(
+      scan((current, update) => ({ ...current, ...update }), initialPagination),
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+
+    // ============================================================================
+    // MANUFACTURERS - Load once on service creation
+    // ============================================================================
+
+    this.manufacturers$ = this.vehicleApi.getManufacturers().pipe(
+      catchError(error => {
+        console.error('Error loading manufacturers:', error);
+        return of([]);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    // ============================================================================
+    // MODELS - Load when manufacturer changes
+    // ============================================================================
+
+    this.models$ = this.filters$.pipe(
+      map(filters => filters.manufacturer),
+      distinctUntilChanged(),
+      switchMap(manufacturer => {
+        if (!manufacturer) {
+          return of([]);
+        }
+        return this.vehicleApi.getModels(manufacturer).pipe(
+          catchError(error => {
+            console.error('Error loading models:', error);
+            return of([]);
+          })
+        );
+      }),
+      startWith([]),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    // ============================================================================
+    // AVAILABLE FILTERS - Load when manufacturer/model changes
+    // ============================================================================
+
+    this.availableFilters$ = this.filters$.pipe(
+      map(filters => ({ manufacturer: filters.manufacturer, model: filters.model })),
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      switchMap(({ manufacturer, model }) => {
+        return this.vehicleApi.getFilters(manufacturer || undefined, model || undefined).pipe(
+          catchError(error => {
+            console.error('Error loading filters:', error);
+            return of(null);
+          })
+        );
+      }),
+      startWith(null),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    // ============================================================================
+    // COMPUTED STATE
+    // ============================================================================
+
+    this.hasResults$ = this.vehicles$.pipe(
+      map(vehicles => vehicles.length > 0)
+    );
+
+    // Subscribe to keep cached values updated for synchronous localStorage saves
+    this.filters$.subscribe(filters => this.currentFilters = filters);
+    this.pagination$.subscribe(pagination => this.currentPagination = pagination);
+  }
+
+  // ============================================================================
+  // PUBLIC API - Action Dispatchers
+  // ============================================================================
+  // These are simple, synchronous methods that dispatch actions.
+  // All coordination and side effects are handled by the reactive streams.
+
+  /**
+   * Initialize filters from URL params or localStorage
+   * Call this once when component initializes
+   *
+   * Professional pattern - Priority hierarchy:
+   * 1. URL with params → Use URL (external links, bookmarks, page refresh with params)
+   * 2. URL without params + localStorage → Restore from storage (in-app nav, page refresh)
+   * 3. URL without params + no localStorage → Empty filters (first visit, browse-first)
+   *
+   * Note: When restoring from localStorage, URL will be synced automatically
+   * via the component's combineLatest subscription (maintains URL-first principle)
+   */
+  initialize(urlParams?: any): void {
+    if (urlParams && Object.keys(urlParams).length > 0) {
+      // Priority 1: URL params present - use them (highest priority)
+      const filters: VehicleSearchFilters = {};
+
+      if (urlParams.manufacturer) {
+        filters.manufacturer = urlParams.manufacturer;
+      }
+      if (urlParams.model) {
+        filters.model = urlParams.model;
+      }
+      if (urlParams.body_class) {
+        filters.body_class = urlParams.body_class;
+      }
+      if (urlParams.year) {
+        filters.year = parseInt(urlParams.year, 10);
+      }
+
+      // Dispatch initialize action with parsed filters
+      this.initializeAction$.next(filters);
+
+      // Handle pagination from URL
+      // IMPORTANT: Set page size FIRST, then page, because changePageSize resets to page 1
+      if (urlParams.page || urlParams.limit) {
+        const limit = urlParams.limit ? parseInt(urlParams.limit, 10) : 20;
+        if (limit !== 20) {
+          this.changePageSizeAction$.next(limit);
         }
 
-        if (state.pagination) {
-          this.updateState(this.paginationSubject, state.pagination);
+        const page = urlParams.page ? parseInt(urlParams.page, 10) : 1;
+        if (page > 1) {
+          this.changePageAction$.next(page);
         }
       }
-    } catch (error) {
-      console.error('Error restoring state from localStorage:', error);
+
+      // Save URL params to localStorage so they persist on future visits
+      // This enables bookmark persistence: arrive via URL → save → return with clean URL → restore
+      this.saveCurrentState();
+    } else {
+      // Priority 2: No URL params - try to restore from localStorage
+      const stored = this.loadFromLocalStorage();
+
+      if (stored) {
+        // Restore filters from localStorage
+        this.initializeAction$.next(stored.filters);
+
+        // Restore pagination from localStorage
+        // IMPORTANT: Set page size FIRST, then page, because changePageSize resets to page 1
+        if (stored.pagination.limit !== 20) {
+          this.changePageSizeAction$.next(stored.pagination.limit);
+        }
+        if (stored.pagination.page > 1) {
+          this.changePageAction$.next(stored.pagination.page);
+        }
+
+        // URL will be automatically synced by component's subscription
+        // This maintains URL-first principle even when restoring from storage
+      }
+      // Priority 3: No URL params, no localStorage → defaults to empty (browse-first)
     }
+  }
+
+  /**
+   * Select a manufacturer (resets model selection)
+   */
+  selectManufacturer(manufacturer: string | null): void {
+    this.selectManufacturerAction$.next(manufacturer);
+    this.saveCurrentState();
+  }
+
+  /**
+   * Select a model
+   */
+  selectModel(model: string | null): void {
+    this.selectModelAction$.next(model);
+    this.saveCurrentState();
+  }
+
+  /**
+   * Update filters (partial update)
+   */
+  updateFilters(filters: Partial<VehicleSearchFilters>): void {
+    this.updateFiltersAction$.next(filters);
+    this.saveCurrentState();
+  }
+
+  /**
+   * Change to a specific page
+   */
+  changePage(page: number): void {
+    this.changePageAction$.next(page);
+    this.saveCurrentState();
+  }
+
+  /**
+   * Change page size (resets to page 1)
+   */
+  changePageSize(limit: number): void {
+    this.changePageSizeAction$.next(limit);
+    this.saveCurrentState();
+  }
+
+  /**
+   * Clear all filters
+   */
+  clearFilters(): void {
+    this.clearFiltersAction$.next();
+    // Also clear localStorage when user explicitly clears filters
+    this.clearLocalStorage();
+  }
+
+  // ============================================================================
+  // PRIVATE HELPERS - localStorage operations with versioning and error handling
+  // ============================================================================
+
+  /**
+   * Save current state to localStorage (imperative helper)
+   * Uses cached values for synchronous operation
+   * This is called explicitly after each action method
+   */
+  private saveCurrentState(): void {
+    this.saveToLocalStorage(this.currentFilters, this.currentPagination);
+  }
+
+  /**
+   * Save current state to localStorage
+   * Includes versioning and timestamp for migrations and expiration
+   */
+  private saveToLocalStorage(filters: VehicleSearchFilters, pagination: Pagination): void {
+    try {
+      const state: StoredState = {
+        version: this.STORAGE_VERSION,
+        filters,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit
+        },
+        timestamp: Date.now()
+      };
+
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      // localStorage might be full, disabled, or in private mode
+      console.warn('Failed to save state to localStorage:', error);
+    }
+  }
+
+  /**
+   * Load state from localStorage with version checking and expiration
+   * Returns null if storage is empty, expired, or invalid
+   */
+  private loadFromLocalStorage(): StoredState | null {
+    try {
+      const json = localStorage.getItem(this.STORAGE_KEY);
+      if (!json) {
+        return null;
+      }
+
+      const stored: StoredState = JSON.parse(json);
+
+      // Check if data is too old (expired)
+      if (stored.timestamp && (Date.now() - stored.timestamp > this.MAX_AGE_MS)) {
+        console.info('Stored state expired, clearing');
+        this.clearLocalStorage();
+        return null;
+      }
+
+      // Version migration support (for future schema changes)
+      if (!stored.version || stored.version !== this.STORAGE_VERSION) {
+        console.info('Stored state version mismatch, migrating');
+        return this.migrateStoredState(stored);
+      }
+
+      return stored;
+    } catch (error) {
+      // JSON parse error or localStorage access error
+      console.warn('Failed to load state from localStorage:', error);
+      this.clearLocalStorage();
+      return null;
+    }
+  }
+
+  /**
+   * Clear localStorage (called when user explicitly clears filters)
+   */
+  private clearLocalStorage(): void {
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error);
+    }
+  }
+
+  /**
+   * Migrate old storage formats to current version
+   * Currently just returns null (no old versions to migrate from)
+   */
+  private migrateStoredState(oldState: any): StoredState | null {
+    // Future: Add migration logic here when schema changes
+    // For now, just ignore old versions
+    console.warn('Cannot migrate old state version, using defaults');
+    return null;
   }
 }

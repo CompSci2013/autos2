@@ -1,8 +1,23 @@
 FROM node:18-alpine
 
 # Install Angular CLI globally and other development tools
-RUN apk add --no-cache bash curl git && \
+# Chromium and its dependencies are needed for Karma/Jasmine unit tests
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    chromium \
+    chromium-chromedriver \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont && \
     npm install -g @angular/cli@14
+
+# Set Chrome binary path for Karma tests
+ENV CHROME_BIN=/usr/bin/chromium-browser \
+    CHROMIUM_BIN=/usr/bin/chromium-browser
 
 WORKDIR /app
 
