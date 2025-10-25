@@ -70,6 +70,9 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     this.state.pagination$
       .pipe(takeUntil(this.destroy$))
       .subscribe(data => this.pagination = data);
+
+    // Trigger initial search
+    this.state.search();
   }
 
   onManufacturerChange(): void {

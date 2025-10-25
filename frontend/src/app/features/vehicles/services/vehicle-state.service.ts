@@ -56,14 +56,8 @@ export class VehicleStateService {
     // Restore state from localStorage
     this.restoreState();
 
-    // Perform initial search if filters exist
-    const currentFilters = this.filtersSubject.value;
-    if (Object.keys(currentFilters).length > 0) {
-      this.search();
-    } else {
-      // Load initial results
-      this.search();
-    }
+    // Don't auto-trigger search - let the component decide when to search
+    // This prevents change detection issues during initialization
   }
 
   loadManufacturers(): void {
