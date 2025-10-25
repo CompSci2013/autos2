@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-25 (Session 5 Complete - NG0900 Fixed, Manufacturer Filtering Working)
+**Last Updated**: 2025-10-25 (Session 6 Complete - Browse-First Pattern, Backend Pagination)
 
 ---
 
@@ -13,41 +13,41 @@ Project: Autos2 - Vehicle database application (Angular 14 + Node.js + Elasticse
 Location: /home/odin/projects/autos2
 Git Branch: main
 Production URL: http://autos2.minilab
-Dev URL: http://localhost:4201
+Dev URL: http://192.168.0.244:4201 (use IP, not localhost)
 
-Application Status: ✅ DEVELOPMENT WORKING - Ready for Browse-First Pattern
-- Production: Running at http://autos2.minilab (⚠️ needs deployment - has old NG0900 errors)
-- Development: http://localhost:4201 (✅ All fixes working - no errors)
-- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy)
+Application Status: ✅ PRODUCTION WORKING - Browse-First Pattern Complete
+- Production: Running at http://autos2.minilab (✅ v1.0.0-session6 deployed)
+- Development: http://192.168.0.244:4201 (✅ All features working)
+- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy, CORS enabled)
 - Dev Container: autos2-frontend-dev (running with /home/odin/projects/autos2/frontend:/app:z)
 
-✅ SESSION 5 COMPLETED:
-- Fixed all NG0900/NG0100 errors (ExpressionChangedAfterItHasBeenCheckedError)
-- Fixed all API response type mismatches (manufacturers, models, vehicles)
-- Fixed interface field name mismatches (vehicle_id, manufacturer, vehicle_count, etc.)
-- Fixed query parameter names (manufacturer → manufacturers plural)
-- Configured English locale for NG-ZORRO (eliminates Chinese text)
-- Created proxy configuration for dev server
-- Manufacturer filtering working correctly (tested: Buick shows 27 vehicles)
-- All API calls returning 200/304 status codes
-- Dev environment with HMR working properly
+✅ SESSION 6 COMPLETED:
+- Implemented browse-first pattern (shows 20 vehicles on page load, no filter required)
+- Added "Showing X-Y of Z vehicles" count display (right-aligned in card header)
+- Fixed backend pagination ([nzFrontPagination]="false" - now shows 80 pages correctly)
+- Fixed pagination race condition with setTimeout wrapper
+- Removed unnecessary proxy configuration (Traefik handles routing)
+- Fixed CORS to allow dev server access (CORS_ORIGIN: "*")
+- Fixed totalPages mapping from backend snake_case (total_pages)
+- Changed dev environment to use http://autos2.minilab/api/v1 directly
+- Filter winnowing working (select manufacturer → winnows to that manufacturer only)
 
-🎯 PRIMARY GOAL FOR SESSION 6:
-Implement "browse-first" filter pattern:
-- Table should show initial 20 vehicles WITHOUT requiring manufacturer selection
-- Currently table is empty until user selects a manufacturer
-- Auto-trigger search on page load with empty filters
-- Add "Showing X-Y of Z vehicles" count display
-- Test filter winnowing (select Ford → winnows to Ford vehicles only)
+🎯 PRIMARY GOAL FOR SESSION 7:
+URL parameter sync for bookmarking and sharing:
+- Sync filter state with URL query parameters (?manufacturers=Buick&page=1&size=20)
+- Enable bookmarking of filtered views
+- Enable sharing filtered searches via URL
+- Restore filter state from URL on page load
 
 Please orient yourself by reading:
-1. frontend/src/app/features/vehicles/services/vehicle-state.service.ts - State management
-2. frontend/src/app/pages/discover/discover.component.ts - Component initialization
-3. NEXT-SESSION.md Session 5 section - See all fixes applied
+1. NEXT-SESSION.md Session 6 section - See browse-first implementation
+2. frontend/src/app/features/vehicles/services/vehicle-state.service.ts - State management
+3. frontend/src/app/pages/discover/discover.component.ts - Component with working pagination
 
 SECONDARY GOALS:
-- Deploy Session 5 fixes to production (build + k8s deployment)
-- Consider URL parameter sync for bookmarking (like old app)
+- Performance optimizations (trackBy functions for *ngFor loops)
+- OnPush change detection (optional)
+- Additional filter improvements (year range, multi-select)
 ```
 
 ---
@@ -290,14 +290,84 @@ SECONDARY GOALS:
 - frontend/src/app/services/vehicle.service.ts (RxJS map transforms, parameter fixes)
 - frontend/proxy.conf.json (created for API proxying)
 
+### What Was Accomplished (Session 6 - 2025-10-25)
+
+**Browse-First Pattern Implementation:**
+- ✅ Auto-load first 20 vehicles on page load without requiring filter selection
+  - Search triggers automatically in ngAfterViewInit with empty filters
+  - Users can immediately browse vehicles without selecting manufacturer
+- ✅ Added "Showing X-Y of Z vehicles" count display
+  - Positioned in card header (right-aligned using nz-card [nzExtra])
+  - Helper methods: getStartRecord() and getEndRecord() for pagination display
+  - Shows "Showing 1-20 of 793 vehicles" dynamically
+- ✅ Filter winnowing working correctly
+  - Select manufacturer → table winnows to only that manufacturer's vehicles
+  - Clear filters → returns to showing all vehicles
+  - Tested: Buick shows 27 vehicles (2 pages @ 20/page)
+
+**Backend Pagination Fix:**
+- ✅ Fixed pagination to show correct page count
+  - Added [nzFrontPagination]="false" to enable backend pagination mode
+  - Paginator now correctly shows 80 pages for 793 vehicles @ 10/page
+  - Page size changes work: 10/page (80 pages), 20/page (40 pages), 50/page (16 pages)
+  - Root cause: nz-table was using frontend pagination (only paginating the 10 items in [nzData])
+- ✅ Fixed totalPages mapping
+  - Backend returns: total_pages (snake_case)
+  - Frontend expects: totalPages (camelCase)
+  - Added explicit field mapping in vehicle.service.ts
+- ✅ Fixed pagination race condition
+  - changePageSize() was calling search() before state update completed
+  - Wrapped search() call in setTimeout to ensure state updates first
+
+**API Configuration Fixes:**
+- ✅ Removed unnecessary proxy configuration
+  - Deleted frontend/proxy.conf.json
+  - Dev server no longer uses --proxy-config flag
+  - Traefik/Ingress handles routing (as it should)
+- ✅ Fixed dev environment API URL
+  - Changed from: apiUrl: '/api/v1' (relative - caused CORS issues)
+  - Changed to: apiUrl: 'http://autos2.minilab/api/v1' (absolute)
+  - Browser makes requests directly to autos2.minilab
+  - Traefik routes to backend correctly
+- ✅ Fixed CORS configuration
+  - Updated backend CORS_ORIGIN from "http://autos2.minilab" to "*"
+  - Allows dev server at 192.168.0.244:4201 to access API
+  - Production and dev both work correctly
+
+**Production Deployment:**
+- ✅ Tagged v1.0.0-session6
+- ✅ Built and deployed frontend to production
+  - Image: localhost/autos2-frontend:v1.0.0-session6
+  - 2 pods running and healthy
+- ✅ Deployed backend CORS update
+  - Updated k8s/backend-deployment.yaml with CORS_ORIGIN: "*"
+  - 2 pods rolled out successfully
+- ✅ Verified production working
+  - Browse-first pattern working at http://autos2.minilab
+  - Pagination showing correct page counts
+  - All API calls successful (no CORS errors)
+
+**Git Commits:**
+- 647a1de: feat: Implement browse-first pattern with vehicle count display
+- f32a03f: fix: Enable backend pagination and fix API configuration
+
+**Files Modified:**
+- frontend/src/app/pages/discover/discover.component.html (added count display, nzFrontPagination)
+- frontend/src/app/pages/discover/discover.component.ts (added getStartRecord/getEndRecord helpers)
+- frontend/src/app/features/vehicles/services/vehicle-state.service.ts (pagination race fix)
+- frontend/src/app/services/vehicle.service.ts (totalPages mapping)
+- frontend/src/environments/environment.ts (apiUrl to autos2.minilab)
+- k8s/backend-deployment.yaml (CORS_ORIGIN: "*")
+- frontend/proxy.conf.json (deleted)
+
 ### Current State
-- **Production**: http://autos2.minilab (⚠️ Needs deployment - has old code with NG0900 errors)
-- **Development**: http://localhost:4201 (✅ WORKING - all fixes verified)
-- **Dev Container**: autos2-frontend-dev (running, volume-mounted at /app)
-- **Code Status**: ✅ All NG0900 errors fixed, manufacturer filtering working
-- **Proxy Status**: ✅ Working correctly (forwards /api to backend)
-- **Git**: Ready to commit Session 5 fixes (7 modified files + 1 new file)
-- **Documentation**: NEXT-SESSION.md updated with Session 5 completion
+- **Production**: http://autos2.minilab (✅ v1.0.0-session6 deployed and working)
+- **Development**: http://192.168.0.244:4201 (✅ All features working - use IP not localhost)
+- **Dev Container**: autos2-frontend-dev (running, volume-mounted at /app, HMR enabled)
+- **Code Status**: ✅ Browse-first pattern complete, backend pagination working
+- **API Status**: ✅ CORS enabled (*), Traefik routing working
+- **Git**: Clean working tree, all Session 6 changes committed and tagged
+- **Documentation**: NEXT-SESSION.md updated with Session 6 completion
 
 ### Technical Debt Remaining
 | Priority | Item | Effort | Status |
@@ -311,34 +381,27 @@ SECONDARY GOALS:
 
 ### Next Steps
 
-**IMMEDIATE (Session 6):**
-1. **Implement browse-first pattern** (PRIMARY GOAL from Session 5)
-   - Table should show initial 20 vehicles WITHOUT requiring manufacturer selection
-   - Currently table is empty until user selects a manufacturer
-   - Auto-trigger search on page load with empty filters
-   - Add "Showing X-Y of Z vehicles" count display
-   - Test filter winnowing behavior (select Ford → see only Ford vehicles)
+**IMMEDIATE (Session 7):**
+1. **URL parameter sync for bookmarking** (PRIMARY GOAL)
+   - Sync filter state with URL query parameters
+   - Format: `?manufacturers=Buick&page=1&size=20`
+   - Enables bookmarking and sharing of filtered views
+   - Restore filter state from URL on page load
+   - Update URL when filters change (without page reload)
+   - Integrate with Angular Router's ActivatedRoute
 
-2. **Deploy Session 5 fixes to production**
-   - Build new frontend Docker image with all fixes
-   - Deploy to k8s cluster
-   - Verify NG0900 errors are resolved in production
-   - Verify manufacturer filtering works in production
+2. **Additional filter improvements** (if time permits)
+   - Add year range filter (min/max year selection)
+   - Multi-select for manufacturers (currently single-select)
+   - Multi-select for models
+   - Body class filter improvements
 
-3. **URL parameter sync** (nice-to-have)
-   - Old app had URL params like: `?manufacturers=Buick&page=1&size=20`
-   - Enables bookmarking and sharing filtered views
-   - Sync Angular router params with VehicleStateService
-
-4. **Consider pagination improvements**
-   - Current paginator shows page selector
-   - Verify it works correctly with different manufacturers
-   - Test page size changes (10, 20, 50, 100)
-
-**FUTURE (Phase 2 completion):**
-- Phase 2.3: OnPush change detection (optional)
-- Phase 3: Type Safety improvements
-- Phase 4: Performance optimizations (trackBy functions)
+**FUTURE (Phase 2 completion & beyond):**
+- Performance optimizations (trackBy functions for *ngFor loops)
+- OnPush change detection (optional)
+- Type Safety improvements
+- Advanced search features (full-text search, saved searches)
+- User preferences (save filter presets)
 
 ### Important Notes
 - **Container-based development**: All npm/ng commands run via `podman exec`
