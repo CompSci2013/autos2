@@ -126,20 +126,23 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     return Math.min(end, pagination.total);
   }
 
-  getSortOrder(columnName: string): 'asc' | 'desc' | null {
+  getSortOrder(columnName: string): 'ascend' | 'descend' | null {
     if (this.currentSort.sortBy === columnName) {
-      return this.currentSort.sortOrder;
+      // Convert our 'asc'/'desc' to NG-ZORRO's 'ascend'/'descend'
+      return this.currentSort.sortOrder === 'asc' ? 'ascend' :
+             this.currentSort.sortOrder === 'desc' ? 'descend' : null;
     }
     return null;
   }
 
-  onSortChange(columnName: string, sortOrder: 'asc' | 'desc' | null): void {
+  onSortChange(columnName: string, sortOrder: string | null): void {
     if (sortOrder === null) {
       // Clear sort when clicking on already-sorted column for the third time
       this.state.clearSort();
-    } else {
-      // Sort by this column
-      this.state.sortByColumn(columnName, sortOrder);
+    } else if (sortOrder === 'ascend' || sortOrder === 'descend') {
+      // NG-ZORRO uses 'ascend'/'descend', convert to our 'asc'/'desc'
+      const order = sortOrder === 'ascend' ? 'asc' : 'desc';
+      this.state.sortByColumn(columnName, order);
     }
   }
 
