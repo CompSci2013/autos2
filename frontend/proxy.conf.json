@@ -1,0 +1,8 @@
+{
+  "/api": {
+    "target": "http://autos2.minilab",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
