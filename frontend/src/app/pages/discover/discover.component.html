@@ -70,10 +70,36 @@
       </nz-row>
 
       <nz-row [nzGutter]="16">
-        <nz-col [nzSpan]="24">
-          <button nz-button (click)="clearFilters()">
-            Clear Filters
-          </button>
+        <nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>Year</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                nzShowSearch
+                nzAllowClear
+                nzPlaceHolder="Select year"
+                [(ngModel)]="searchFilters.year"
+                [ngModelOptions]="{standalone: true}"
+                (ngModelChange)="onSearchChange()">
+                <nz-option
+                  *ngFor="let year of availableYears"
+                  [nzValue]="year"
+                  [nzLabel]="year.toString()">
+                </nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+
+        <nz-col [nzSpan]="16">
+          <nz-form-item>
+            <nz-form-label>&nbsp;</nz-form-label>
+            <nz-form-control>
+              <button nz-button (click)="clearFilters()">
+                Clear Filters
+              </button>
+            </nz-form-control>
+          </nz-form-item>
         </nz-col>
       </nz-row>
     </form>

@@ -40,10 +40,10 @@ describe('VehicleStateService - Navigation & Persistence', () => {
   };
 
   const mockFilters = {
-    manufacturers: mockManufacturers,
-    models: mockModels,
     body_classes: [{ value: 'Sedan', count: 10 }],
-    years: []
+    body_styles: [{ value: 'Sedan', count: 10 }],
+    drive_types: [{ value: '4WD', count: 5 }],
+    transmission_styles: [{ value: 'Automatic', count: 15 }]
   };
 
   beforeEach(() => {
@@ -903,6 +903,131 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       service.sortState$.subscribe(sort => {
         expect(sort.sortBy).toBeNull();
         expect(sort.sortOrder).toBeNull();
+      }).unsubscribe();
+    }));
+  });
+
+  describe('Column Filtering - Year', () => {
+    it('should set year filter in state', fakeAsync(() => {
+      // Act: Update filters with year
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2020 });
+      tick(100);
+
+      // Assert: Filter state updated
+      service.filters$.subscribe(filters => {
+        expect(filters.year).toBe(2020);
+      }).unsubscribe();
+    }));
+
+    it('should persist year filter in cache for URL sync', fakeAsync(() => {
+      // Act: Set year filter
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2015 });
+      tick(600); // Wait for debounce and localStorage save
+
+      // Assert: Year saved to cache (which component uses to sync URL)
+      const currentState = (service as any).currentFilters;
+      expect(currentState.year).toBe(2015);
+    }));
+
+    it('should persist year filter in localStorage', fakeAsync(() => {
+      // Act: Set year filter
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2018 });
+      tick(600); // Wait for localStorage save debounce
+
+      // Assert: localStorage contains year
+      const saved = localStorage.getItem(STORAGE_KEY);
+      expect(saved).not.toBeNull();
+
+      const parsed = JSON.parse(saved!);
+      expect(parsed.filters.year).toBe(2018);
+    }));
+
+    it('should restore year filter from URL on initialize', fakeAsync(() => {
+      // Arrange
+      vehicleApiSpy.getManufacturers.and.returnValue(of([]));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      // Act: Initialize with year in URL params
+      service.initialize({ year: '2022' });
+      tick(100);
+
+      // Assert: Year filter restored and parsed as number
+      service.filters$.subscribe(filters => {
+        expect(filters.year).toBe(2022);
+        expect(typeof filters.year).toBe('number');
+      }).unsubscribe();
+    }));
+
+    it('should restore year filter from localStorage after browser restart', fakeAsync(() => {
+      // Arrange: Save state with year filter
+      const savedState = {
+        version: '1.0',
+        filters: { manufacturer: null, model: null, body_class: null, year: 2019 },
+        pagination: { page: 1, limit: 20 },
+        sort: { sortBy: null, sortOrder: null },
+        timestamp: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+
+      vehicleApiSpy.getManufacturers.and.returnValue(of([]));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      // Act: Initialize without URL params (simulating browser restart)
+      service.initialize({});
+      tick(100);
+
+      // Assert: Year restored from localStorage
+      service.filters$.subscribe(filters => {
+        expect(filters.year).toBe(2019);
+      }).unsubscribe();
+    }));
+
+    it('should clear year filter when clearFilters is called', fakeAsync(() => {
+      // Arrange: Set year filter first
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2021 });
+      tick(100);
+
+      // Act: Clear filters
+      service.clearFilters();
+      tick(100);
+
+      // Assert: Year should be null
+      service.filters$.subscribe(filters => {
+        expect(filters.year).toBeNull();
+      }).unsubscribe();
+    }));
+
+    it('should combine year filter with manufacturer filter', fakeAsync(() => {
+      // Arrange
+      vehicleApiSpy.getModels.and.returnValue(of([]));
+
+      // Act: Set manufacturer and year filters
+      service.selectManufacturer('Toyota');
+      tick(100);
+      service.updateFilters({ manufacturer: 'Toyota', model: null, body_class: null, year: 2020 });
+      tick(100);
+
+      // Assert: Both filters should be in state
+      service.filters$.subscribe(filters => {
+        expect(filters.manufacturer).toBe('Toyota');
+        expect(filters.year).toBe(2020);
+      }).unsubscribe();
+    }));
+
+    it('should handle null year value gracefully', fakeAsync(() => {
+      // Arrange: Set a year first
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: 2020 });
+      tick(100);
+
+      // Act: Set year to null (clearing it)
+      service.updateFilters({ manufacturer: null, model: null, body_class: null, year: null });
+      tick(100);
+
+      // Assert: Year should be null
+      service.filters$.subscribe(filters => {
+        expect(filters.year).toBeNull();
       }).unsubscribe();
     }));
   });

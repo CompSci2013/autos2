@@ -41,11 +41,20 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     sortOrder: null
   };
 
+  // Available years for year filter dropdown (last 40 years)
+  availableYears: number[] = [];
+
   constructor(
     private state: VehicleStateService,
     private route: ActivatedRoute,
     private router: Router
-  ) { }
+  ) {
+    // Generate year range from current year back to 1990
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear; year >= 1990; year--) {
+      this.availableYears.push(year);
+    }
+  }
 
   ngOnInit(): void {
     // Initialize from URL params ONCE on page load
