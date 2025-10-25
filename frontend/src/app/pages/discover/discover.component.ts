@@ -35,6 +35,12 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     year: null
   };
 
+  // Track current sort state for column headers
+  currentSort: { sortBy: string | null; sortOrder: 'asc' | 'desc' | null } = {
+    sortBy: null,
+    sortOrder: null
+  };
+
   constructor(
     private state: VehicleStateService,
     private route: ActivatedRoute,
@@ -53,18 +59,26 @@ export class DiscoverComponent implements OnInit, OnDestroy {
         this.searchFilters = { ...filters };
       });
 
+    // Sync current sort state (for column header indicators)
+    this.state.sortState$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(sort => {
+        this.currentSort = sort;
+      });
+
     // Subscribe to state changes to update URL
     combineLatest([
       this.state.filters$,
-      this.state.pagination$
+      this.state.pagination$,
+      this.state.sortState$
     ])
       .pipe(
         takeUntil(this.destroy$),
         debounceTime(300), // Debounce to avoid excessive URL updates
         distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr))
       )
-      .subscribe(([filters, pagination]) => {
-        this.updateUrlParams(filters, pagination);
+      .subscribe(([filters, pagination, sort]) => {
+        this.updateUrlParams(filters, pagination, sort);
       });
 
     // Handle browser back/forward navigation
@@ -112,7 +126,28 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     return Math.min(end, pagination.total);
   }
 
-  private updateUrlParams(filters: VehicleSearchFilters, pagination: Pagination): void {
+  getSortOrder(columnName: string): 'asc' | 'desc' | null {
+    if (this.currentSort.sortBy === columnName) {
+      return this.currentSort.sortOrder;
+    }
+    return null;
+  }
+
+  onSortChange(columnName: string, sortOrder: 'asc' | 'desc' | null): void {
+    if (sortOrder === null) {
+      // Clear sort when clicking on already-sorted column for the third time
+      this.state.clearSort();
+    } else {
+      // Sort by this column
+      this.state.sortByColumn(columnName, sortOrder);
+    }
+  }
+
+  private updateUrlParams(
+    filters: VehicleSearchFilters,
+    pagination: Pagination,
+    sort: { sortBy: string | null; sortOrder: 'asc' | 'desc' | null }
+  ): void {
     // Build query params object
     const queryParams: any = {};
 
@@ -136,6 +171,12 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     }
     if (pagination.limit !== 20) {
       queryParams.limit = pagination.limit;
+    }
+
+    // Add sort params (only if set)
+    if (sort.sortBy && sort.sortOrder) {
+      queryParams.sortBy = sort.sortBy;
+      queryParams.sortOrder = sort.sortOrder;
     }
 
     // Update URL without reloading the page

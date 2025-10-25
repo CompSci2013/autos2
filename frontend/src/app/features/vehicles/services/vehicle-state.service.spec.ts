@@ -717,4 +717,193 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       }).unsubscribe();
     }));
   });
+
+  // ============================================================================
+  // SCENARIO 8: Column Sorting
+  // ============================================================================
+
+  describe('Scenario 8: Column Sorting', () => {
+    it('should sort by column ascending', fakeAsync(() => {
+      // Act: Sort by year ascending
+      service.sortByColumn('year', 'asc');
+      tick(100);
+
+      // Assert: Sort state should be set
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('year');
+        expect(sort.sortOrder).toBe('asc');
+      }).unsubscribe();
+    }));
+
+    it('should sort by column descending', fakeAsync(() => {
+      // Arrange: Start with ascending sort
+      service.sortByColumn('year', 'asc');
+      tick(100);
+
+      // Act: Sort by year descending
+      service.sortByColumn('year', 'desc');
+      tick(100);
+
+      // Assert: Sort state should be descending
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('year');
+        expect(sort.sortOrder).toBe('desc');
+      }).unsubscribe();
+    }));
+
+    it('should clear sort when clicking sorted column third time', fakeAsync(() => {
+      // Arrange: Start with descending sort
+      service.sortByColumn('year', 'asc');
+      tick(100);
+      service.sortByColumn('year', 'desc');
+      tick(100);
+
+      // Act: Click third time to clear
+      service.clearSort();
+      tick(100);
+
+      // Assert: Sort should be cleared (back to default)
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBeNull();
+        expect(sort.sortOrder).toBeNull();
+      }).unsubscribe();
+    }));
+
+    it('should replace sort when sorting by different column', fakeAsync(() => {
+      // Arrange: Sort by year
+      service.sortByColumn('year', 'asc');
+      tick(100);
+
+      // Act: Sort by manufacturer
+      service.sortByColumn('manufacturer', 'asc');
+      tick(100);
+
+      // Assert: Should replace year sort with manufacturer sort
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('manufacturer');
+        expect(sort.sortOrder).toBe('asc');
+      }).unsubscribe();
+    }));
+
+    it('should persist sort in URL params', fakeAsync(() => {
+      // Act: Sort by year descending
+      service.sortByColumn('year', 'desc');
+      tick(100);
+
+      // Assert: URL params should include sort
+      // (Component subscribes and syncs to URL)
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('year');
+        expect(sort.sortOrder).toBe('desc');
+      }).unsubscribe();
+    }));
+
+    it('should persist sort in localStorage', fakeAsync(() => {
+      // Act: Sort by model ascending
+      service.sortByColumn('model', 'asc');
+      tick(600); // Wait for save
+
+      // Assert: localStorage should contain sort state
+      const saved = localStorage.getItem(STORAGE_KEY);
+      expect(saved).not.toBeNull();
+      const parsed = JSON.parse(saved!);
+      expect(parsed.sort.sortBy).toBe('model');
+      expect(parsed.sort.sortOrder).toBe('asc');
+    }));
+
+    it('should restore sort from localStorage after browser restart', fakeAsync(() => {
+      // Arrange: Save sort state
+      const savedState = {
+        version: '1.0',
+        filters: {},
+        pagination: { page: 1, limit: 20 },
+        sort: { sortBy: 'year', sortOrder: 'desc' },
+        timestamp: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+
+      // Destroy and recreate service
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          VehicleStateService,
+          { provide: VehicleService, useValue: vehicleApiSpy }
+        ]
+      });
+      const newService = TestBed.inject(VehicleStateService);
+
+      // Act: Initialize
+      newService.initialize({});
+      tick(100);
+
+      // Assert: Sort should be restored
+      newService.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('year');
+        expect(sort.sortOrder).toBe('desc');
+      }).unsubscribe();
+    }));
+
+    it('should restore sort from URL params', fakeAsync(() => {
+      // Act: Initialize with URL params
+      service.initialize({ sortBy: 'manufacturer', sortOrder: 'desc' });
+      tick(100);
+
+      // Assert: Sort should be restored from URL
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('manufacturer');
+        expect(sort.sortOrder).toBe('desc');
+      }).unsubscribe();
+    }));
+
+    it('should maintain sort when changing filters', fakeAsync(() => {
+      // Arrange: Set sort
+      service.sortByColumn('year', 'desc');
+      tick(100);
+
+      // Act: Change filter
+      service.selectManufacturer('Ford');
+      tick(100);
+
+      // Assert: Sort should be maintained
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('year');
+        expect(sort.sortOrder).toBe('desc');
+      }).unsubscribe();
+    }));
+
+    it('should maintain sort when changing pagination', fakeAsync(() => {
+      // Arrange: Set sort
+      service.sortByColumn('model', 'asc');
+      tick(100);
+
+      // Act: Change page
+      service.changePage(3);
+      tick(100);
+
+      // Assert: Sort should be maintained
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBe('model');
+        expect(sort.sortOrder).toBe('asc');
+      }).unsubscribe();
+    }));
+
+    it('should clear sort when clearing filters', fakeAsync(() => {
+      // Arrange: Set sort and filter
+      service.sortByColumn('year', 'asc');
+      tick(100);
+      service.selectManufacturer('Ford');
+      tick(100);
+
+      // Act: Clear filters
+      service.clearFilters();
+      tick(100);
+
+      // Assert: Sort should also be cleared
+      service.sortState$.subscribe(sort => {
+        expect(sort.sortBy).toBeNull();
+        expect(sort.sortOrder).toBeNull();
+      }).unsubscribe();
+    }));
+  });
 });

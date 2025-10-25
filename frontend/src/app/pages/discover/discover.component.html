@@ -101,10 +101,30 @@
       <thead>
         <tr>
           <th>Vehicle ID</th>
-          <th>Year</th>
-          <th>Manufacturer</th>
-          <th>Model</th>
-          <th>Body Class</th>
+          <th
+            nzShowSort
+            [nzSortOrder]="getSortOrder('year')"
+            (nzSortOrderChange)="onSortChange('year', $event)">
+            Year
+          </th>
+          <th
+            nzShowSort
+            [nzSortOrder]="getSortOrder('manufacturer')"
+            (nzSortOrderChange)="onSortChange('manufacturer', $event)">
+            Manufacturer
+          </th>
+          <th
+            nzShowSort
+            [nzSortOrder]="getSortOrder('model')"
+            (nzSortOrderChange)="onSortChange('model', $event)">
+            Model
+          </th>
+          <th
+            nzShowSort
+            [nzSortOrder]="getSortOrder('body_class')"
+            (nzSortOrderChange)="onSortChange('body_class', $event)">
+            Body Class
+          </th>
         </tr>
       </thead>
       <tbody>

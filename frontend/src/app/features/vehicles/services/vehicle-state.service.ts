@@ -31,6 +31,11 @@ interface SearchResult {
   pagination: Pagination;
 }
 
+interface SortState {
+  sortBy: string | null;
+  sortOrder: 'asc' | 'desc' | null;
+}
+
 interface StoredState {
   version: string;
   filters: VehicleSearchFilters;
@@ -38,6 +43,7 @@ interface StoredState {
     page: number;
     limit: number;
   };
+  sort?: SortState;
   timestamp: number;
 }
 
@@ -64,6 +70,8 @@ export class VehicleStateService {
   private readonly changePageAction$ = new Subject<number>();
   private readonly changePageSizeAction$ = new Subject<number>();
   private readonly clearFiltersAction$ = new Subject<void>();
+  private readonly sortByColumnAction$ = new Subject<SortState>();
+  private readonly clearSortAction$ = new Subject<void>();
 
   // ============================================================================
   // STATE STREAMS (Outputs) - Components subscribe to these
@@ -72,6 +80,7 @@ export class VehicleStateService {
   // Core state: filters and pagination
   readonly filters$: Observable<VehicleSearchFilters>;
   readonly pagination$: Observable<Pagination>;
+  readonly sortState$: Observable<SortState>;
 
   // Derived state: loaded from API based on filters
   readonly manufacturers$: Observable<Manufacturer[]>;
@@ -86,6 +95,7 @@ export class VehicleStateService {
   // Cache current values for synchronous access
   private currentFilters: VehicleSearchFilters = {};
   private currentPagination: Pagination = { page: 1, limit: 20, total: 0, totalPages: 0 };
+  private currentSort: SortState = { sortBy: null, sortOrder: null };
 
   constructor(private vehicleApi: VehicleService) {
     // ============================================================================
@@ -194,6 +204,25 @@ export class VehicleStateService {
     );
 
     // ============================================================================
+    // SORT STATE - Column sorting
+    // ============================================================================
+
+    this.sortState$ = merge(
+      // Sort by column
+      this.sortByColumnAction$,
+
+      // Clear sort
+      this.clearSortAction$.pipe(
+        map(() => ({ sortBy: null, sortOrder: null }) as SortState)
+      )
+    ).pipe(
+      // Start with no sort (default)
+      startWith({ sortBy: null, sortOrder: null }),
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+
+    // ============================================================================
     // LOADING STATE - Track when search is in progress
     // ============================================================================
 
@@ -209,12 +238,13 @@ export class VehicleStateService {
     );
 
     // ============================================================================
-    // SEARCH EFFECT - Auto-trigger search when filters/pagination change
+    // SEARCH EFFECT - Auto-trigger search when filters/pagination/sort change
     // ============================================================================
 
     const searchTrigger$ = combineLatest([
       this.filters$,
-      clientPagination$  // Use client pagination for triggering searches
+      clientPagination$,  // Use client pagination for triggering searches
+      this.sortState$     // Include sort state in search trigger
     ]).pipe(
       debounceTime(100), // Small debounce to batch rapid changes
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
@@ -222,12 +252,18 @@ export class VehicleStateService {
 
     const searchResult$ = searchTrigger$.pipe(
       tap(() => loadingStart$.next(true)),
-      switchMap(([filters, pagination]) => {
-        const params = {
+      switchMap(([filters, pagination, sort]) => {
+        const params: any = {
           ...filters,
           page: pagination.page,
           limit: pagination.limit
         };
+
+        // Add sort parameters if set
+        if (sort.sortBy && sort.sortOrder) {
+          params.sort = sort.sortBy;
+          params.order = sort.sortOrder;
+        }
 
         return this.vehicleApi.searchVehicles(params).pipe(
           map(response => ({
@@ -336,6 +372,7 @@ export class VehicleStateService {
     // Subscribe to keep cached values updated for synchronous localStorage saves
     this.filters$.subscribe(filters => this.currentFilters = filters);
     this.pagination$.subscribe(pagination => this.currentPagination = pagination);
+    this.sortState$.subscribe(sort => this.currentSort = sort);
   }
 
   // ============================================================================
@@ -391,6 +428,14 @@ export class VehicleStateService {
         }
       }
 
+      // Handle sort from URL
+      if (urlParams.sortBy && urlParams.sortOrder) {
+        this.sortByColumnAction$.next({
+          sortBy: urlParams.sortBy,
+          sortOrder: urlParams.sortOrder as 'asc' | 'desc'
+        });
+      }
+
       // Save URL params to localStorage so they persist on future visits
       // This enables bookmark persistence: arrive via URL → save → return with clean URL → restore
       this.saveCurrentState();
@@ -409,6 +454,11 @@ export class VehicleStateService {
         }
         if (stored.pagination.page > 1) {
           this.changePageAction$.next(stored.pagination.page);
+        }
+
+        // Restore sort from localStorage
+        if (stored.sort && stored.sort.sortBy && stored.sort.sortOrder) {
+          this.sortByColumnAction$.next(stored.sort);
         }
 
         // URL will be automatically synced by component's subscription
@@ -463,8 +513,26 @@ export class VehicleStateService {
    */
   clearFilters(): void {
     this.clearFiltersAction$.next();
+    // Also clear sort when clearing filters
+    this.clearSortAction$.next();
     // Also clear localStorage when user explicitly clears filters
     this.clearLocalStorage();
+  }
+
+  /**
+   * Sort by column
+   */
+  sortByColumn(sortBy: string, sortOrder: 'asc' | 'desc'): void {
+    this.sortByColumnAction$.next({ sortBy, sortOrder });
+    this.saveCurrentState();
+  }
+
+  /**
+   * Clear sort
+   */
+  clearSort(): void {
+    this.clearSortAction$.next();
+    this.saveCurrentState();
   }
 
   // ============================================================================
@@ -477,14 +545,14 @@ export class VehicleStateService {
    * This is called explicitly after each action method
    */
   private saveCurrentState(): void {
-    this.saveToLocalStorage(this.currentFilters, this.currentPagination);
+    this.saveToLocalStorage(this.currentFilters, this.currentPagination, this.currentSort);
   }
 
   /**
    * Save current state to localStorage
    * Includes versioning and timestamp for migrations and expiration
    */
-  private saveToLocalStorage(filters: VehicleSearchFilters, pagination: Pagination): void {
+  private saveToLocalStorage(filters: VehicleSearchFilters, pagination: Pagination, sort: SortState): void {
     try {
       const state: StoredState = {
         version: this.STORAGE_VERSION,
@@ -493,6 +561,7 @@ export class VehicleStateService {
           page: pagination.page,
           limit: pagination.limit
         },
+        sort,
         timestamp: Date.now()
       };
 
