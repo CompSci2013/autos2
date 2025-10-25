@@ -76,6 +76,16 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
     this.state.changePageSize(size);
   }
 
+  getStartRecord(pagination: Pagination): number {
+    if (pagination.total === 0) return 0;
+    return (pagination.page - 1) * pagination.limit + 1;
+  }
+
+  getEndRecord(pagination: Pagination): number {
+    const end = pagination.page * pagination.limit;
+    return Math.min(end, pagination.total);
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();

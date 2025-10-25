@@ -82,7 +82,13 @@
     </form>
   </nz-card>
 
-  <nz-card nzTitle="Search Results" class="results-card">
+  <nz-card nzTitle="Search Results" [nzExtra]="extraTemplate" class="results-card">
+    <ng-template #extraTemplate>
+      <span *ngIf="pagination$ | async as pagination" style="color: rgba(0, 0, 0, 0.65);">
+        Showing {{ getStartRecord(pagination) }}-{{ getEndRecord(pagination) }} of {{ pagination.total | number }} vehicles
+      </span>
+    </ng-template>
+
     <nz-table
       #vehicleTable
       [nzData]="(vehicles$ | async) || []"
