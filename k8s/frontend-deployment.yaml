@@ -23,7 +23,7 @@ spec:
         kubernetes.io/hostname: thor
       containers:
       - name: frontend
-        image: localhost/autos2-frontend:v1.0.4
+        image: localhost/autos2-frontend:v1.0.5
         imagePullPolicy: Never
         ports:
         - containerPort: 80
