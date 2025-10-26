@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, combineLatest } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
@@ -14,7 +14,8 @@ import { VehicleSearchFilters, Pagination } from '../../features/vehicles/models
 @Component({
   selector: 'app-discover',
   templateUrl: './discover.component.html',
-  styleUrls: ['./discover.component.scss']
+  styleUrls: ['./discover.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DiscoverComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -208,5 +209,28 @@ export class DiscoverComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // ===== TrackBy Functions for Performance =====
+  // These prevent unnecessary DOM re-renders when data refreshes
+
+  trackByManufacturerName(index: number, manufacturer: Manufacturer): string {
+    return manufacturer.name;
+  }
+
+  trackByModelName(index: number, model: Model): string {
+    return model.name;
+  }
+
+  trackByVehicleId(index: number, vehicle: Vehicle): string {
+    return vehicle.vehicle_id;
+  }
+
+  trackByBodyClassValue(index: number, bodyClass: { value: string; count: number }): string {
+    return bodyClass.value;
+  }
+
+  trackByYear(index: number, year: number): number {
+    return year;
   }
 }

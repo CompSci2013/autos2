@@ -16,7 +16,7 @@
                 [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onManufacturerChange()">
                 <nz-option
-                  *ngFor="let mfr of manufacturers$ | async"
+                  *ngFor="let mfr of manufacturers$ | async; trackBy: trackByManufacturerName"
                   [nzValue]="mfr.name"
                   [nzLabel]="mfr.name + ' (' + mfr.vehicle_count + ')'">
                 </nz-option>
@@ -38,7 +38,7 @@
                 [nzDisabled]="!searchFilters.manufacturer"
                 (ngModelChange)="onSearchChange()">
                 <nz-option
-                  *ngFor="let model of models$ | async"
+                  *ngFor="let model of models$ | async; trackBy: trackByModelName"
                   [nzValue]="model.name"
                   [nzLabel]="model.name + ' (' + model.vehicle_count + ')'">
                 </nz-option>
@@ -59,7 +59,7 @@
                 [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onSearchChange()">
                 <nz-option
-                  *ngFor="let bc of (availableFilters$ | async)?.body_classes"
+                  *ngFor="let bc of (availableFilters$ | async)?.body_classes; trackBy: trackByBodyClassValue"
                   [nzValue]="bc.value"
                   [nzLabel]="bc.value + ' (' + bc.count + ')'">
                 </nz-option>
@@ -82,7 +82,7 @@
                 [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onSearchChange()">
                 <nz-option
-                  *ngFor="let year of availableYears"
+                  *ngFor="let year of availableYears; trackBy: trackByYear"
                   [nzValue]="year"
                   [nzLabel]="year.toString()">
                 </nz-option>
@@ -170,7 +170,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let vehicle of vehicleTable.data">
+        <tr *ngFor="let vehicle of vehicleTable.data; trackBy: trackByVehicleId">
           <td>{{ vehicle.vehicle_id }}</td>
           <td>{{ vehicle.year }}</td>
           <td>{{ vehicle.manufacturer }}</td>
@@ -193,7 +193,7 @@
       (ngModelChange)="onSearchChange(); yearFilterVisible = false"
       style="width: 200px;">
       <nz-option
-        *ngFor="let year of availableYears"
+        *ngFor="let year of availableYears; trackBy: trackByYear"
         [nzValue]="year"
         [nzLabel]="year.toString()">
       </nz-option>
@@ -211,7 +211,7 @@
       (ngModelChange)="onManufacturerChange(); manufacturerFilterVisible = false"
       style="width: 250px;">
       <nz-option
-        *ngFor="let mfr of manufacturers$ | async"
+        *ngFor="let mfr of manufacturers$ | async; trackBy: trackByManufacturerName"
         [nzValue]="mfr.name"
         [nzLabel]="mfr.name">
       </nz-option>
@@ -230,7 +230,7 @@
       (ngModelChange)="onSearchChange(); modelFilterVisible = false"
       style="width: 250px;">
       <nz-option
-        *ngFor="let model of models$ | async"
+        *ngFor="let model of models$ | async; trackBy: trackByModelName"
         [nzValue]="model.name"
         [nzLabel]="model.name">
       </nz-option>
@@ -248,7 +248,7 @@
       (ngModelChange)="onSearchChange(); bodyClassFilterVisible = false"
       style="width: 200px;">
       <nz-option
-        *ngFor="let bc of (availableFilters$ | async)?.body_classes"
+        *ngFor="let bc of (availableFilters$ | async)?.body_classes; trackBy: trackByBodyClassValue"
         [nzValue]="bc.value"
         [nzLabel]="bc.value">
       </nz-option>

@@ -826,65 +826,346 @@ const routes: Routes = [
 
 ---
 
-## Phase 6: Component Decomposition (Future)
-**Goal**: Split large components into smaller, reusable pieces
+## Phase 6: Advanced UX Features (Future)
+**Goal**: Match UX sophistication of legacy Autos application and Aircraft Registry
+**Estimated Effort**: 25-30 hours
 **Status**: 📋 Planned
+**Inspired By**: Legacy Autos application screenshots and Aircraft Registry reference
 
-### 6.1 Extract Presentational Components
+### 6.1 Multi-Select Filters with Apply Pattern
+
+**Priority**: 🟡 HIGH (UX Parity with legacy app)
+**Effort**: 8 hours
+
+**Current Behavior**:
+- Single-select dropdowns with immediate search on change
+- Each filter change triggers API call
+- No ability to select multiple manufacturers/models
+
+**Desired Behavior** (from legacy Autos screenshots):
+- Checkbox-based multi-select for manufacturers and models
+- "Apply" button to batch-execute search
+- "Clear" button to reset all selections
+- Active filter count display (e.g., "2 model(s) selected")
+- Expandable/collapsible filter panels
+
+**Tasks**:
+- [ ] Replace single-select dropdowns with NG-ZORRO `nz-checkbox-group`
+- [ ] Add "Apply (count)" and "Clear" buttons
+- [ ] Update VehicleStateService to handle array-based filters
+- [ ] Debounce API calls until Apply is clicked
+- [ ] Show selected filter chips/badges
+- [ ] Add expandable accordion panels for filter groups
+
+**Implementation Sketch**:
+```typescript
+// VehicleSearchFilters interface update
+export interface VehicleSearchFilters {
+  manufacturers?: string[];  // Changed from string to string[]
+  models?: string[];         // Changed from string to string[]
+  year_min?: number;
+  year_max?: number;
+  body_classes?: string[];   // New: multi-select body class
+}
+
+// Component
+selectedManufacturers: string[] = [];
+selectedModels: string[] = [];
+
+onApply(): void {
+  this.vehicleState.updateFilters({
+    manufacturers: this.selectedManufacturers,
+    models: this.selectedModels
+  });
+}
+
+onClear(): void {
+  this.selectedManufacturers = [];
+  this.selectedModels = [];
+  this.vehicleState.clearFilters();
+}
+```
+
+**Acceptance Criteria**:
+- [ ] Users can select multiple manufacturers/models via checkboxes
+- [ ] Apply button shows count (e.g., "Apply (3)")
+- [ ] Clear button resets all selections
+- [ ] Filters batch-update on Apply (not per-selection)
+- [ ] Selected items shown as chips/badges
+- [ ] Accordion panels expand/collapse cleanly
+
+---
+
+### 6.2 Year Range Selector
+
+**Priority**: 🟡 HIGH (Backend already supports it!)
+**Effort**: 3 hours
+
+**Current Behavior**:
+- Single year dropdown (select 1975 only)
+- Backend receives `year_min=1975&year_max=1975`
+
+**Desired Behavior** (from legacy Autos screenshots):
+- Dual-slider or From/To dropdowns
+- Select range like "1960-1970" in one interaction
+- Visual feedback of selected range
+
+**Tasks**:
+- [ ] Implement dual-dropdown approach (simpler, more accessible)
+  - "From Year" dropdown (1900-2025)
+  - "To Year" dropdown (1900-2025)
+- [ ] OR: Implement NG-ZORRO `nz-slider` with range mode (more visual)
+- [ ] Update component to set year_min/year_max
+- [ ] Validation: Ensure From <= To
+- [ ] Show selected range label (e.g., "1960-1970")
+
+**Implementation Sketch**:
+```html
+<!-- Option A: Dual Dropdowns (Accessible) -->
+<nz-form-item>
+  <nz-form-label>Year Range</nz-form-label>
+  <nz-form-control>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <nz-select [(ngModel)]="yearMin" [nzPlaceHolder]="'From Year'">
+        <nz-option *ngFor="let year of years" [nzValue]="year" [nzLabel]="year"></nz-option>
+      </nz-select>
+      <span>to</span>
+      <nz-select [(ngModel)]="yearMax" [nzPlaceHolder]="'To Year'">
+        <nz-option *ngFor="let year of years" [nzValue]="year" [nzLabel]="year"></nz-option>
+      </nz-select>
+    </div>
+  </nz-form-control>
+</nz-form-item>
+
+<!-- Option B: Range Slider (Visual) -->
+<nz-form-item>
+  <nz-form-label>Year Range: {{ yearRange[0] }} - {{ yearRange[1] }}</nz-form-label>
+  <nz-form-control>
+    <nz-slider
+      [nzRange]="true"
+      [(ngModel)]="yearRange"
+      [nzMin]="1900"
+      [nzMax]="2025"
+      [nzStep]="1">
+    </nz-slider>
+  </nz-form-control>
+</nz-form-item>
+```
+
+**Acceptance Criteria**:
+- [ ] Users can select year range (e.g., 1960-1970)
+- [ ] Validation prevents To < From
+- [ ] Backend receives correct year_min/year_max parameters
+- [ ] Visual feedback shows selected range
+- [ ] Works with Apply button pattern (if implementing 6.1 first)
+
+---
+
+### 6.3 Distribution Charts (PlotlyJS Integration)
+
+**Priority**: 🟠 MEDIUM (High visual impact)
+**Effort**: 8 hours
+
+**Current Behavior**:
+- Text-based stats on home page
+- No visual data exploration
+
+**Desired Behavior** (from Aircraft Registry screenshots):
+- Interactive bar charts showing data distributions
+- "Vehicles by Manufacturer" chart (top 10 manufacturers)
+- "Body Class Distribution" chart
+- Hover tooltips showing exact counts
+- Click-to-filter interaction (optional)
+
+**Tasks**:
+- [ ] Install and configure angular-plotly.js
+- [ ] Create `DistributionChartComponent` (reusable)
+- [ ] Fetch aggregation data from stats endpoint
+- [ ] Implement "Vehicles by Manufacturer" chart
+- [ ] Implement "Body Class Distribution" chart
+- [ ] Add to Home page or create new Analytics page
+- [ ] Make charts responsive
+- [ ] (Optional) Click chart bar to filter Discover page
+
+**Implementation Sketch**:
+```typescript
+// distribution-chart.component.ts
+@Component({
+  selector: 'app-distribution-chart',
+  template: `
+    <plotly-plot
+      [data]="chartData"
+      [layout]="chartLayout"
+      [config]="chartConfig">
+    </plotly-plot>
+  `
+})
+export class DistributionChartComponent implements OnInit {
+  @Input() title: string;
+  @Input() data: Array<{name: string, count: number}>;
+
+  chartData: any[];
+  chartLayout: any;
+  chartConfig: any = { responsive: true };
+
+  ngOnInit(): void {
+    this.chartData = [{
+      x: this.data.map(d => d.name),
+      y: this.data.map(d => d.count),
+      type: 'bar',
+      marker: { color: '#1890ff' }
+    }];
+
+    this.chartLayout = {
+      title: this.title,
+      xaxis: { title: 'Category' },
+      yaxis: { title: 'Count' },
+      margin: { t: 40, r: 20, b: 100, l: 60 }
+    };
+  }
+}
+
+// home.component.html
+<nz-row [nzGutter]="16">
+  <nz-col [nzSpan]="12">
+    <nz-card nzTitle="Vehicles by Manufacturer">
+      <app-distribution-chart
+        *ngIf="stats$ | async as stats"
+        [title]="'Top 10 Manufacturers'"
+        [data]="stats.manufacturer_distribution | slice:0:10">
+      </app-distribution-chart>
+    </nz-card>
+  </nz-col>
+  <nz-col [nzSpan]="12">
+    <nz-card nzTitle="Body Class Distribution">
+      <app-distribution-chart
+        *ngIf="stats$ | async as stats"
+        [title]="'Vehicle Types'"
+        [data]="stats.body_class_distribution">
+      </app-distribution-chart>
+    </nz-card>
+  </nz-col>
+</nz-row>
+```
+
+**Acceptance Criteria**:
+- [ ] PlotlyJS charts render correctly
+- [ ] Charts show manufacturer and body class distributions
+- [ ] Hover tooltips display exact counts
+- [ ] Charts are responsive (resize with window)
+- [ ] Charts match NG-ZORRO color scheme
+- [ ] Loading states handled gracefully
+
+---
+
+### 6.4 Expandable/Collapsible Filter Panels
+
+**Priority**: 🟢 MEDIUM (Clean UI, progressive disclosure)
+**Effort**: 4 hours
+
+**Current Behavior**:
+- Flat filter layout
+- All filters always visible
+
+**Desired Behavior** (from Aircraft Registry screenshots):
+- Accordion-style expandable sections
+- "Expand All" / "Collapse All" buttons
+- Hierarchical manufacturer → models display
+- Panel headers show active filter count
+
+**Tasks**:
+- [ ] Refactor filters to use NG-ZORRO `nz-collapse` (accordion)
+- [ ] Create filter panel groups:
+  - "Manufacturer + Model" panel
+  - "Year Range" panel
+  - "Body Class" panel
+- [ ] Add "Expand All" / "Collapse All" buttons
+- [ ] Show active filter count in panel headers
+- [ ] Persist panel expansion state to localStorage
+
+**Implementation Sketch**:
+```html
+<nz-collapse>
+  <nz-collapse-panel
+    [nzHeader]="'Manufacturer + Model' + (manufacturerFilterCount ? ' (' + manufacturerFilterCount + ')' : '')"
+    [nzActive]="true">
+    <!-- Manufacturer checkbox list -->
+    <!-- Model checkbox list (filtered by selected manufacturers) -->
+  </nz-collapse-panel>
+
+  <nz-collapse-panel
+    [nzHeader]="'Year Range' + (yearFilterActive ? ' (active)' : '')"
+    [nzActive]="false">
+    <!-- Year range selector -->
+  </nz-collapse-panel>
+
+  <nz-collapse-panel
+    [nzHeader]="'Body Class' + (bodyClassFilterCount ? ' (' + bodyClassFilterCount + ')' : '')"
+    [nzActive]="false">
+    <!-- Body class checkbox list -->
+  </nz-collapse-panel>
+</nz-collapse>
+
+<div style="margin-top: 16px;">
+  <button nz-button (click)="expandAll()">Expand All</button>
+  <button nz-button (click)="collapseAll()">Collapse All</button>
+</div>
+```
+
+**Acceptance Criteria**:
+- [ ] Filters organized into logical accordion panels
+- [ ] Panel headers show active filter counts
+- [ ] Expand/Collapse All buttons work
+- [ ] Panel state persists to localStorage
+- [ ] Clean, uncluttered UI
+
+---
+
+### 6.5 Customizable Dashboard Layout
+
+**Priority**: 🟢 LOW (Power user feature, future)
+**Effort**: 15+ hours
+
+**Current Behavior**:
+- Fixed page layouts
+- No customization options
+
+**Desired Behavior** (from Workshop screenshots):
+- Drag-and-drop resizable panels
+- User-defined layouts
+- Save/load custom layouts (PostgreSQL user preferences)
+- Admin vs. user default layouts
+
+**Tasks**:
+- [ ] Install and configure angular-gridster2
+- [ ] Create dashboard framework component
+- [ ] Define panel types (filters, results, charts, etc.)
+- [ ] Implement drag-and-drop
+- [ ] Implement resize handles
+- [ ] Save layouts to user preferences API
+- [ ] Load saved layouts on login
+- [ ] Provide "Reset to Default" option
+
+**Acceptance Criteria**:
+- [ ] Users can drag panels to rearrange
+- [ ] Users can resize panels
+- [ ] Layouts persist across sessions
+- [ ] Admin can define default layouts
+- [ ] Performance remains acceptable with 6+ panels
+
+---
+
+## Phase 7: Component Decomposition (Future)
+**Goal**: Split large components into smaller, reusable pieces
+**Status**: 📋 Planned (Deferred after Phase 6)
+
+### 7.1 Extract Presentational Components
 
 **Tasks**:
 - [ ] Create `SearchFormComponent` (presentational)
 - [ ] Create `VehicleTableComponent` (presentational)
 - [ ] Create `FiltersComponent` (presentational)
 - [ ] Refactor `DiscoverComponent` to container pattern
-
-**Example Refactoring**:
-
-```typescript
-// Before: One large component
-@Component({
-  selector: 'app-discover',
-  template: `
-    <!-- 200+ lines of template -->
-  `
-})
-export class DiscoverComponent {
-  // 300+ lines of logic
-}
-
-// After: Container + Presentational
-@Component({
-  selector: 'app-discover-container',
-  template: `
-    <app-search-form
-      [manufacturers]="manufacturers$ | async"
-      [models]="models$ | async"
-      (search)="onSearch($event)">
-    </app-search-form>
-
-    <app-vehicle-table
-      [vehicles]="vehicles$ | async"
-      [loading]="loading$ | async"
-      (pageChange)="onPageChange($event)">
-    </app-vehicle-table>
-  `
-})
-export class DiscoverContainerComponent {
-  // Only coordination logic, ~50 lines
-}
-
-@Component({
-  selector: 'app-search-form',
-  template: `<!-- Pure UI, no services -->`
-})
-export class SearchFormComponent {
-  @Input() manufacturers: Manufacturer[];
-  @Input() models: Model[];
-  @Output() search = new EventEmitter<SearchFilters>();
-
-  // Only UI logic, easily testable
-}
-```
 
 ---
 
@@ -962,6 +1243,13 @@ export class SearchFormComponent {
   - [ ] Feature modules
   - [ ] Lazy loading
 
+- [ ] **Phase 6**: Advanced UX Features (Future)
+  - [ ] Multi-select filters with Apply pattern
+  - [ ] Year range selector
+  - [ ] Distribution charts (PlotlyJS)
+  - [ ] Expandable/collapsible filter panels
+  - [ ] Customizable dashboard layout
+
 ---
 
 ## Next Steps
@@ -974,6 +1262,6 @@ export class SearchFormComponent {
 
 ---
 
-**Document Version**: 2.0
-**Last Updated**: 2025-10-25 (Session 10 - Phases 1 & 2 Complete)
+**Document Version**: 3.0
+**Last Updated**: 2025-10-26 (Session 12 - Phase 6 Added, Production v1.0.3 Deployed)
 **Owner**: Autos2 Development Team
