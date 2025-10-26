@@ -14,7 +14,9 @@
                 nzPlaceHolder="Select manufacturer"
                 [(ngModel)]="searchFilters.manufacturer"
                 [ngModelOptions]="{standalone: true}"
-                (ngModelChange)="onManufacturerChange()">
+                (ngModelChange)="onManufacturerChange()"
+                (nzOnSearch)="onManufacturerSearch($event)"
+                (keydown)="onManufacturerKeyDown($event)">
                 <nz-option
                   *ngFor="let mfr of manufacturers$ | async; trackBy: trackByManufacturerName"
                   [nzValue]="mfr.name"

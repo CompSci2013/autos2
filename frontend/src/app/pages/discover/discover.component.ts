@@ -38,6 +38,10 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     year_max: null
   };
 
+  // Track manufacturer search input for autocomplete
+  manufacturerSearchValue = '';
+  filteredManufacturers: Manufacturer[] = [];
+
   // Track current sort state for column headers
   currentSort: { sortBy: string | null; sortOrder: 'asc' | 'desc' | null } = {
     sortBy: null,
@@ -68,6 +72,13 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     // Initialize from URL params ONCE on page load
     const initialParams = this.route.snapshot.queryParams;
     this.state.initialize(initialParams);
+
+    // Subscribe to manufacturers for autocomplete
+    this.manufacturers$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(manufacturers => {
+        this.filteredManufacturers = manufacturers;
+      });
 
     // Sync local searchFilters with state (needed for ngModel binding)
     this.state.filters$
@@ -114,6 +125,29 @@ export class DiscoverComponent implements OnInit, OnDestroy {
 
   onManufacturerChange(): void {
     this.state.selectManufacturer(this.searchFilters.manufacturer || null);
+  }
+
+  onManufacturerSearch(value: string): void {
+    // Store search value for autocomplete
+    this.manufacturerSearchValue = value;
+  }
+
+  onManufacturerKeyDown(event: KeyboardEvent): void {
+    // Handle Tab key for autocomplete
+    if (event.key === 'Tab' && this.manufacturerSearchValue && !this.searchFilters.manufacturer) {
+      // Find first manufacturer that starts with the search value (case insensitive)
+      const searchLower = this.manufacturerSearchValue.toLowerCase();
+      const match = this.filteredManufacturers.find(mfr =>
+        mfr.name.toLowerCase().startsWith(searchLower)
+      );
+
+      if (match) {
+        event.preventDefault(); // Prevent default Tab behavior
+        this.searchFilters.manufacturer = match.name;
+        this.onManufacturerChange();
+        this.manufacturerSearchValue = ''; // Clear search value
+      }
+    }
   }
 
   onSearchChange(): void {
