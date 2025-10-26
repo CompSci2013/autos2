@@ -130,7 +130,9 @@ export class VehicleStateService {
         manufacturer: null,
         model: null,
         body_class: null,
-        year: null
+        year: null,
+        year_min: null,
+        year_max: null
       }),
       // Accumulate filter changes
       scan((currentFilters, update: any) => {
@@ -140,7 +142,9 @@ export class VehicleStateService {
             manufacturer: null,
             model: null,
             body_class: null,
-            year: null
+            year: null,
+            year_min: null,
+            year_max: null
           };
         }
 
@@ -259,13 +263,22 @@ export class VehicleStateService {
           limit: pagination.limit
         };
 
-        // Transform year to year_min/year_max for backend API
-        // Backend expects range parameters, we store single year in state
-        if (filters.year) {
+        // Handle year range parameters for backend API
+        // Priority 1: Use year_min/year_max if provided (Phase 6.2 feature)
+        // Priority 2: Transform single year to range for backward compatibility
+        if (filters.year_min !== undefined && filters.year_min !== null) {
+          params.year_min = filters.year_min;
+        }
+        if (filters.year_max !== undefined && filters.year_max !== null) {
+          params.year_max = filters.year_max;
+        }
+        // Backward compatibility: single year → year_min/year_max
+        if (filters.year && !params.year_min && !params.year_max) {
           params.year_min = filters.year;
           params.year_max = filters.year;
-          delete params.year; // Remove year from params
         }
+        // Always remove year param (backend doesn't use it)
+        delete params.year;
 
         // Add sort parameters if set
         if (sort.sortBy && sort.sortOrder) {

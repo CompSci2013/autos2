@@ -33,7 +33,9 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     manufacturer: null,
     model: null,
     body_class: null,
-    year: null
+    year: null,  // Deprecated
+    year_min: null,
+    year_max: null
   };
 
   // Track current sort state for column headers
@@ -119,6 +121,22 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     this.state.updateFilters(this.searchFilters);
   }
 
+  onYearRangeChange(): void {
+    // Validate before applying
+    if (this.searchFilters.year_min && this.searchFilters.year_max &&
+        this.searchFilters.year_min > this.searchFilters.year_max) {
+      // Don't update state if validation fails - just show warning in UI
+      return;
+    }
+    this.state.updateFilters(this.searchFilters);
+  }
+
+  setYearRange(min: number, max: number): void {
+    this.searchFilters.year_min = min;
+    this.searchFilters.year_max = max;
+    this.state.updateFilters(this.searchFilters);
+  }
+
   clearFilters(): void {
     this.state.clearFilters();
   }
@@ -179,6 +197,14 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     if (filters.body_class) {
       queryParams.body_class = filters.body_class;
     }
+    // Year range params
+    if (filters.year_min) {
+      queryParams.year_min = filters.year_min;
+    }
+    if (filters.year_max) {
+      queryParams.year_max = filters.year_max;
+    }
+    // Backward compatibility: keep old year param if present
     if (filters.year) {
       queryParams.year = filters.year;
     }

@@ -72,21 +72,61 @@
       <nz-row [nzGutter]="16">
         <nz-col [nzSpan]="8">
           <nz-form-item>
-            <nz-form-label>Year</nz-form-label>
+            <nz-form-label>Year Range</nz-form-label>
             <nz-form-control>
-              <nz-select
-                nzShowSearch
-                nzAllowClear
-                nzPlaceHolder="Select year"
-                [(ngModel)]="searchFilters.year"
-                [ngModelOptions]="{standalone: true}"
-                (ngModelChange)="onSearchChange()">
-                <nz-option
-                  *ngFor="let year of availableYears; trackBy: trackByYear"
-                  [nzValue]="year"
-                  [nzLabel]="year.toString()">
-                </nz-option>
-              </nz-select>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <!-- From Year Dropdown -->
+                <nz-select
+                  nzShowSearch
+                  nzAllowClear
+                  nzPlaceHolder="From Year"
+                  [(ngModel)]="searchFilters.year_min"
+                  [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="onYearRangeChange()"
+                  style="width: 120px;">
+                  <nz-option
+                    *ngFor="let year of availableYears; trackBy: trackByYear"
+                    [nzValue]="year"
+                    [nzLabel]="year.toString()">
+                  </nz-option>
+                </nz-select>
+
+                <span style="color: rgba(0,0,0,0.45);">to</span>
+
+                <!-- To Year Dropdown -->
+                <nz-select
+                  nzShowSearch
+                  nzAllowClear
+                  nzPlaceHolder="To Year"
+                  [(ngModel)]="searchFilters.year_max"
+                  [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="onYearRangeChange()"
+                  style="width: 120px;">
+                  <nz-option
+                    *ngFor="let year of availableYears; trackBy: trackByYear"
+                    [nzValue]="year"
+                    [nzLabel]="year.toString()">
+                  </nz-option>
+                </nz-select>
+              </div>
+
+              <!-- Validation Warning -->
+              <div
+                *ngIf="searchFilters.year_min && searchFilters.year_max && searchFilters.year_min > searchFilters.year_max"
+                style="color: #ff4d4f; margin-top: 4px; font-size: 12px;">
+                <i nz-icon nzType="warning" nzTheme="fill"></i>
+                "From Year" cannot be greater than "To Year"
+              </div>
+
+              <!-- Quick Decade Presets -->
+              <nz-button-group style="margin-top: 8px;">
+                <button nz-button nzSize="small" (click)="setYearRange(1950, 1959)">50s</button>
+                <button nz-button nzSize="small" (click)="setYearRange(1960, 1969)">60s</button>
+                <button nz-button nzSize="small" (click)="setYearRange(1970, 1979)">70s</button>
+                <button nz-button nzSize="small" (click)="setYearRange(1980, 1989)">80s</button>
+                <button nz-button nzSize="small" (click)="setYearRange(1990, 1999)">90s</button>
+                <button nz-button nzSize="small" (click)="setYearRange(2000, 2009)">2000s</button>
+              </nz-button-group>
             </nz-form-control>
           </nz-form-item>
         </nz-col>
