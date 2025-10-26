@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-26 (Session 12 Complete - Production v1.0.3 + Phase 4 Performance!)
+**Last Updated**: 2025-10-26 (Session 13 Complete - Phase 6.2 Year Range Selector!)
 
 ---
 
@@ -15,13 +15,47 @@ Git Branch: main
 Production URL: http://autos2.minilab
 Dev URL: http://192.168.0.244:4201 (use IP, not localhost)
 
-Application Status: ✅ PRODUCTION-READY - v1.0.3 Deployed!
-- Production: Running at http://autos2.minilab (✅ v1.0.3 - all improvements deployed)
-- Development: http://192.168.0.244:4201 (✅ Phase 4 performance improvements)
-- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy, rate limiting fixed)
+Application Status: ✅ PRODUCTION-READY - v1.0.5 Deployed!
+- Production: Running at http://autos2.minilab (✅ v1.0.5 - Year Range Selector!)
+- Development: http://192.168.0.244:4201 (✅ Clean year filter UX)
+- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy)
 - Dev Container: autos2-frontend-dev (✅ Chromium configured for testing)
 - Test Suite: **102/103 passing (99%)** ✅ (1 skipped - RxJS timing test)
 - Bundle Size: **1.29 MB** (within 1.5 MB budget) ✅
+
+✅ SESSION 13 COMPLETE - PHASE 6.2 YEAR RANGE SELECTOR:
+
+1. Phase 6.2 Implementation (3 hours):
+   - ✅ Dual year dropdowns: From Year / To Year
+   - ✅ Decade preset buttons: 60s, 70s, 80s, 90s, 2000s
+   - ✅ Validation: From > To shows warning
+   - ✅ Open-ended ranges: 1975+, ≤1970
+   - ✅ URL persistence: ?year_min=1970&year_max=1979
+   - ✅ localStorage: Survives refresh/restart
+   - ✅ Backward compatible: Old ?year=1975 URLs still work
+
+2. UX Improvement (30 minutes):
+   - ✅ Removed duplicate inline year filter from column header
+   - ✅ Single source of truth: Search Filters Year Range
+   - ✅ Eliminated UX confusion
+   - ✅ Kept year column sorting
+
+3. Production Deployment:
+   - ✅ v1.0.4: Year Range Selector
+   - ✅ v1.0.5: UX fix (remove duplicate filter)
+   - ✅ Pushed to GitLab
+   - ✅ All pods healthy, all features verified
+
+🎯 NEXT SESSION PRIORITIES:
+1. **Upgrade skipped RxJS test to marble testing** (HIGH)
+   - 1 test skipped since Session 10
+   - Convert to marble test pattern for reliability
+   - Get to 103/103 passing (100%)
+
+2. **Continue Phase 6 Implementation** (MEDIUM)
+   - Phase 6.1: Multi-Select Filters (8 hours)
+   - Phase 6.3: Distribution Charts (8 hours)
+   - Phase 6.4: Expandable Panels (4 hours)
 
 ✅ SESSION 12 COMPLETE - PRODUCTION DEPLOYMENT + PHASE 4:
 
@@ -695,6 +729,127 @@ WHAT'S WORKING:
 - **Debug Logging**: Console.log statements invaluable for diagnosing reactive pipeline issues
 - **User Feedback**: Screenshot + network tab = gold for debugging
 - **Test Limitations**: RxJS reactive timing can make some tests fragile (skip if functionality verified)
+
+### What Was Accomplished (Session 13 - 2025-10-26)
+
+**Phase 6.2 Implementation - Year Range Selector:**
+- ✅ **Dual Year Dropdowns** (From/To pattern)
+  - Replaced single year dropdown with range selectors
+  - From Year (year_min): 120px width, searchable, clearable
+  - To Year (year_max): 120px width, searchable, clearable
+  - Visual separator: "to" text between dropdowns
+  - Full year range: 1900-2025 (all data years covered)
+
+- ✅ **Decade Preset Buttons** (Quick selection)
+  - 5 buttons: 50s, 60s, 70s, 80s, 90s, 2000s
+  - One-click selection (e.g., "70s" → From=1970, To=1979)
+  - Auto-applies filter immediately (no Apply button needed)
+  - Horizontal button group layout with small size
+
+- ✅ **Validation** (Data integrity)
+  - Red warning if From Year > To Year
+  - Shows icon + message: "From Year cannot be greater than To Year"
+  - Prevents filter application when validation fails
+  - Clear visual feedback with #ff4d4f color
+
+- ✅ **Open-Ended Ranges** (Flexible filtering)
+  - From=1975, To=empty → "1975+ vehicles"
+  - From=empty, To=1975 → "≤1975 vehicles"
+  - From=1970, To=1979 → "1970-1979 vehicles"
+  - Both=empty → All vehicles (no filtering)
+
+- ✅ **Full Integration**
+  - URL persistence: `?year_min=1970&year_max=1979`
+  - localStorage: Survives page refresh and browser restart
+  - Backward compatibility: Old `?year=1975` URLs still work
+  - State service handles transformation automatically
+
+**UX Improvement - Remove Duplicate Year Filter:**
+- ❌ **Problem Identified**: User feedback "Better design needed"
+  - Two places to filter by year caused confusion:
+    1. Search Filters: Year Range (From/To) - new Phase 6.2 feature
+    2. Column Header: Single year dropdown - old pattern
+  - Users didn't know which one to use
+  - They operated independently (not synced)
+
+- ✅ **Solution Implemented**:
+  - Removed inline year filter dropdown from table column header
+  - Removed nz-filter-trigger and filter icon
+  - Removed yearFilterVisible property
+  - Removed yearFilterMenu dropdown definition
+  - Kept year column sorting functionality (ascending/descending)
+
+- ✅ **Result**: Single source of truth
+  - Year filtering only in Search Filters (Year Range)
+  - Cleaner, less confusing UX
+  - Year column still sortable
+  - All tests passing: 102/103 (99%)
+
+**Production Deployment:**
+- ✅ **v1.0.4**: Year Range Selector deployed
+  - Tagged, built, and deployed frontend image
+  - Imported to k3s and applied to deployment
+  - Verified API filtering: `year_min=1970&year_max=1979` → 217 vehicles
+  - All 4 pods healthy and passing readiness checks
+
+- ✅ **v1.0.5**: UX fix deployed
+  - Removed duplicate inline year filter
+  - Single filtering location (Search Filters)
+  - Cleaner user experience
+  - Pushed to GitLab with tags
+
+**Technical Implementation:**
+- **Interface Updated**: [vehicle.model.ts](frontend/src/app/features/vehicles/models/vehicle.model.ts)
+  - Added `year_min?: number | null`
+  - Added `year_max?: number | null`
+  - Kept `year?: number | null` for backward compatibility
+
+- **Template Updated**: [discover.component.html:72-131](frontend/src/app/pages/discover/discover.component.html#L72-L131)
+  - Dual dropdowns with 120px width each
+  - Validation warning UI
+  - Decade preset buttons
+  - Removed inline year filter from column header
+
+- **Component Logic**: [discover.component.ts](frontend/src/app/pages/discover/discover.component.ts)
+  - Added `onYearRangeChange()` with validation
+  - Added `setYearRange(min, max)` for presets
+  - Updated URL parameter handling for year_min/year_max
+  - Removed yearFilterVisible property
+
+- **State Service**: [vehicle-state.service.ts:262-277](frontend/src/app/features/vehicles/services/vehicle-state.service.ts#L262-L277)
+  - Priority 1: Use year_min/year_max if provided
+  - Priority 2: Transform single year to range (backward compat)
+  - Always removes year param (backend doesn't use it)
+  - Updated clearFilters() to clear year range
+
+**Testing & Quality:**
+- ✅ TypeScript compilation: No errors
+- ✅ Bundle size: 1.29 MB (within 1.5 MB budget)
+- ✅ Unit tests: 102/103 passing (99%)
+- ✅ 1 skipped test: RxJS timing test from Session 10
+- ✅ No regressions from changes
+
+**Git Commits:**
+- a34f658: feat: Implement Phase 6.2 - Year Range Selector with decade presets
+- 2107101: fix: Remove duplicate year filter from table column header
+- a7fa575: chore: Deploy v1.0.4 to production (Phase 6.2)
+- 93e71ca: chore: Deploy v1.0.5 to production (UX fix)
+
+**Files Modified:**
+- frontend/src/app/features/vehicles/models/vehicle.model.ts (interface)
+- frontend/src/app/pages/discover/discover.component.html (template)
+- frontend/src/app/pages/discover/discover.component.ts (logic)
+- frontend/src/app/features/vehicles/services/vehicle-state.service.ts (state)
+- k8s/frontend-deployment.yaml (v1.0.4 → v1.0.5)
+
+**Key Learnings:**
+- **UX Feedback Critical**: User screenshot revealed duplicate filter confusion
+- **Single Source of Truth**: Having one clear location for filtering is essential
+- **Backward Compatibility**: Supporting old URL patterns prevents breaking bookmarks
+- **Decade Presets**: Quick selection buttons provide high user value
+- **Validation UX**: Clear visual warnings prevent user errors
+
+---
 
 ### What Was Accomplished (Session 12 - 2025-10-26)
 
