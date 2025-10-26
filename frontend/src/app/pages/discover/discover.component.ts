@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, combineLatest, fromEvent } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, skip, filter } from 'rxjs/operators';
+import { Observable, Subject, combineLatest } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
 import {
   Manufacturer,
   Model,
@@ -17,10 +17,8 @@ import { VehicleSearchFilters, Pagination } from '../../features/vehicles/models
   styleUrls: ['./discover.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
+export class DiscoverComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-
-  @ViewChild('manufacturerSelect', { read: ElementRef }) manufacturerSelectRef!: ElementRef;
 
   // Expose observables directly - async pipe handles subscriptions
   manufacturers$: Observable<Manufacturer[]> = this.state.manufacturers$;
@@ -39,10 +37,6 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
     year_min: null,
     year_max: null
   };
-
-  // Track manufacturer search input for autocomplete
-  manufacturerSearchValue = '';
-  filteredManufacturers: Manufacturer[] = [];
 
   // Track current sort state for column headers
   currentSort: { sortBy: string | null; sortOrder: 'asc' | 'desc' | null } = {
@@ -74,13 +68,6 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
     // Initialize from URL params ONCE on page load
     const initialParams = this.route.snapshot.queryParams;
     this.state.initialize(initialParams);
-
-    // Subscribe to manufacturers for autocomplete
-    this.manufacturers$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(manufacturers => {
-        this.filteredManufacturers = manufacturers;
-      });
 
     // Sync local searchFilters with state (needed for ngModel binding)
     this.state.filters$
@@ -125,46 +112,8 @@ export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
-  ngAfterViewInit(): void {
-    // Set up Tab key autocomplete for manufacturer select
-    // Access the input element within the nz-select component
-    setTimeout(() => {
-      if (this.manufacturerSelectRef) {
-        const inputElement = this.manufacturerSelectRef.nativeElement.querySelector('input');
-        if (inputElement) {
-          fromEvent<KeyboardEvent>(inputElement, 'keydown')
-            .pipe(
-              filter(event => event.key === 'Tab'),
-              takeUntil(this.destroy$)
-            )
-            .subscribe(event => {
-              if (this.manufacturerSearchValue && !this.searchFilters.manufacturer) {
-                const searchLower = this.manufacturerSearchValue.toLowerCase();
-                const match = this.filteredManufacturers.find(mfr =>
-                  mfr.name.toLowerCase().startsWith(searchLower)
-                );
-
-                if (match) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  this.searchFilters.manufacturer = match.name;
-                  this.onManufacturerChange();
-                  this.manufacturerSearchValue = '';
-                }
-              }
-            });
-        }
-      }
-    }, 0);
-  }
-
   onManufacturerChange(): void {
     this.state.selectManufacturer(this.searchFilters.manufacturer || null);
-  }
-
-  onManufacturerSearch(value: string): void {
-    // Store search value for autocomplete
-    this.manufacturerSearchValue = value;
   }
 
   onSearchChange(): void {

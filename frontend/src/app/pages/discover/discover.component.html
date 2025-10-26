@@ -9,14 +9,12 @@
             <nz-form-label>Manufacturer</nz-form-label>
             <nz-form-control>
               <nz-select
-                #manufacturerSelect
                 nzShowSearch
                 nzAllowClear
                 nzPlaceHolder="Select manufacturer"
                 [(ngModel)]="searchFilters.manufacturer"
                 [ngModelOptions]="{standalone: true}"
-                (ngModelChange)="onManufacturerChange()"
-                (nzOnSearch)="onManufacturerSearch($event)">
+                (ngModelChange)="onManufacturerChange()">
                 <nz-option
                   *ngFor="let mfr of manufacturers$ | async; trackBy: trackByManufacturerName"
                   [nzValue]="mfr.name"
