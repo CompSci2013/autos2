@@ -327,7 +327,7 @@ export class VehicleStateService {
     ).pipe(
       scan((current, update) => ({ ...current, ...update }), initialPagination),
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-      shareReplay({ bufferSize: 1, refCount: false })
+      shareReplay({ bufferSize: 1, refCount: true })
     );
 
     // ============================================================================
