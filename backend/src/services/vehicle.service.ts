@@ -262,13 +262,17 @@ export class VehicleService {
     const from = (page - 1) * limit;
 
     // Execute search
+    // Determine sort field - only add .keyword for text fields, not numeric fields like 'year'
+    const numericFields = ['year'];
+    const sortField = numericFields.includes(sort) ? sort : `${sort}.keyword`;
+
     const result = await esClient.search({
       index: this.index,
       from,
       size: limit,
       body: {
         query: Object.keys(query.bool).length > 0 ? query : { match_all: {} },
-        sort: [{ [`${sort}.keyword`]: { order } }],
+        sort: [{ [sortField]: { order } }],
       },
     });
 
