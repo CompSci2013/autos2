@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-26 (Session 11 Complete - Test Coverage Expanded!)
+**Last Updated**: 2025-10-26 (Session 12 Complete - Production v1.0.3 + Phase 4 Performance!)
 
 ---
 
@@ -15,33 +15,55 @@ Git Branch: main
 Production URL: http://autos2.minilab
 Dev URL: http://192.168.0.244:4201 (use IP, not localhost)
 
-Application Status: ✅ READY FOR PRODUCTION - Test Coverage Complete!
-- Production: Running at http://autos2.minilab (✅ v1.0.2 deployed - backend year sorting fixed)
-- Development: http://192.168.0.244:4201 (✅ Inline column filters fully functional)
-- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy, CORS enabled)
+Application Status: ✅ PRODUCTION-READY - v1.0.3 Deployed!
+- Production: Running at http://autos2.minilab (✅ v1.0.3 - all improvements deployed)
+- Development: http://192.168.0.244:4201 (✅ Phase 4 performance improvements)
+- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy, rate limiting fixed)
 - Dev Container: autos2-frontend-dev (✅ Chromium configured for testing)
 - Test Suite: **102/103 passing (99%)** ✅ (1 skipped - RxJS timing test)
+- Bundle Size: **1.29 MB** (within 1.5 MB budget) ✅
 
-✅ SESSION 11 COMPLETE - TEST COVERAGE EXPANDED:
-- Created 4 new comprehensive test suites (60 test cases)
-- All tests passing: 102 SUCCESS, 1 skipped
-- Coverage significantly improved:
-  * Lines: 72.27% → 81.01% (+8.74%)
-  * Statements: 68.34% → 77.95% (+9.61%)
-  * Functions: 56.25% → 68.49% (+12.24%)
-- Fixed 4 test failures:
-  * LoadingInterceptor cancellation test (removed flush after unsubscribe)
-  * ErrorInterceptor retry tests (added async done callbacks)
-  * HomeComponent module imports (added NG-ZORRO modules)
-  * LoadingService hide() expectation (accounts for multiple emissions)
-- Committed with detailed documentation (commit 7673138)
+✅ SESSION 12 COMPLETE - PRODUCTION DEPLOYMENT + PHASE 4:
 
-🎯 PRIMARY GOAL FOR SESSION 12:
-Production deployment and polish:
-- Deploy frontend v1.0.1 with all improvements
-- Verify all features work in production
-- Consider additional optimizations (trackBy, OnPush change detection)
-- Review improvement-roadmap.md for Phase 3 tasks
+1. Production Deployment v1.0.3 (14 commits deployed):
+   - ✅ Deployed frontend with inline filters, sorting, test coverage
+   - ✅ CRITICAL FIX: Backend rate limiting excluded health endpoint
+     * Health probes were being rate-limited (100 req/15min)
+     * K8s probes generated 540 req/15min → 429 errors → pod failures
+     * Fixed with skip() function for /api/v1/health endpoint
+   - ✅ All 4 pods healthy (2 frontend + 2 backend)
+   - ✅ All features verified working in production
+
+2. Phase 6 Planning (Advanced UX Features):
+   - ✅ Updated improvement-roadmap.md with Phase 6 (25-30 hours estimated)
+   - ✅ Created 5 detailed design documents (58 pages total):
+     * phase6-1-multi-select-filters.md (28 pages)
+     * phase6-2-year-range-selector.md (8 pages)
+     * phase6-3-distribution-charts.md (10 pages)
+     * phase6-4-expandable-panels.md (4 pages)
+     * phase6-5-customizable-dashboard.md (8 pages)
+   - ✅ Created PHASE-STATUS.md with comprehensive progress tracking
+   - 🎯 Inspired by legacy Autos app and Aircraft Registry screenshots
+
+3. Phase 4 Implementation (Performance Optimization):
+   - ✅ Added trackBy functions to all 9 *ngFor loops:
+     * trackByManufacturerName, trackByModelName
+     * trackByVehicleId (table rows)
+     * trackByBodyClassValue, trackByYear
+   - ✅ Added OnPush change detection:
+     * HomeComponent: ChangeDetectionStrategy.OnPush
+     * DiscoverComponent: ChangeDetectionStrategy.OnPush
+   - ✅ Build verified: 1.29 MB bundle, no TypeScript errors
+   - 🎯 Expected: 50-70% reduction in DOM re-renders
+
+🎯 PRIMARY GOAL FOR SESSION 13:
+Deploy Phase 4 to production and implement Phase 6.2 (Year Range Selector):
+- Deploy frontend with Phase 4 performance improvements
+- Implement Phase 6.2: Year Range Selector (3 hours)
+  * Dual dropdown (From Year / To Year)
+  * Backend already supports year_min/year_max! ✅
+  * High user value, quick implementation
+- OR: Continue with Phase 6.1 (Multi-Select Filters, 8 hours)
 
 Please orient yourself by reading:
 1. frontend/src/app/pages/discover/discover.component.html - Inline filter dropdowns (lines 127-257)
@@ -673,6 +695,141 @@ WHAT'S WORKING:
 - **Debug Logging**: Console.log statements invaluable for diagnosing reactive pipeline issues
 - **User Feedback**: Screenshot + network tab = gold for debugging
 - **Test Limitations**: RxJS reactive timing can make some tests fragile (skip if functionality verified)
+
+### What Was Accomplished (Session 12 - 2025-10-26)
+
+**Production Deployment v1.0.3:**
+- ✅ Deployed frontend v1.0.3 with all improvements (14 commits)
+  - Inline column header filters (Year, Manufacturer, Model, Body Class)
+  - Column sorting on all filterable columns
+  - Year filter expanded range (1900-2025)
+  - Pagination fixes with shareReplay
+  - Test coverage expansion (102/103 tests passing)
+- ✅ Deployed backend v1.0.3 with CRITICAL rate limiting fix
+  - Health endpoint excluded from rate limiting
+  - K8s probes no longer return 429 errors
+  - All 4 pods healthy and passing readiness checks
+- ✅ Verified all features working in production
+  - Basic queries: 793 vehicles
+  - Manufacturer filter: Buick (27 vehicles)
+  - Year filter: 1975 (72 vehicles)
+  - Sorting: Descending by year working
+  - Stats endpoint: All data correct
+
+**Critical Backend Fix - Rate Limiting:**
+- **Problem**: Health endpoint being rate-limited
+  - Default limit: 100 requests per 15 minutes
+  - K8s health probes: 540 requests per 15 minutes
+  - Result: 429 errors → pods failing readiness → 503 errors
+- **Solution**: Added skip() function to rate limiter
+  - `skip: (req) => req.path === '/api/v1/health'`
+  - Health endpoint now unlimited for K8s probes
+  - Application endpoints still protected
+- **Files Modified**:
+  - backend/src/server.ts (rate limiter configuration)
+  - k8s/backend-deployment.yaml (image v1.0.3)
+  - k8s/frontend-deployment.yaml (image v1.0.3)
+
+**Phase 6 Planning - Advanced UX Features:**
+- ✅ Updated improvement-roadmap.md with Phase 6 (v3.0)
+  - Replaced old "Component Decomposition" with "Advanced UX Features"
+  - 5 sub-phases totaling 25-30 hours
+  - Inspired by legacy Autos app and Aircraft Registry
+- ✅ Created 5 detailed design documents (58 pages):
+  1. **phase6-1-multi-select-filters.md** (28 pages)
+     - Checkbox-based multi-select for manufacturers/models
+     - "Apply" button for batch search execution
+     - Active filter badges display
+     - Backend API contract updates
+     - 8 hours estimated
+  2. **phase6-2-year-range-selector.md** (8 pages)
+     - Dual dropdown (From Year / To Year)
+     - Backend already supports year_min/year_max!
+     - Quick decade presets (60s, 70s, etc.)
+     - 3 hours estimated
+  3. **phase6-3-distribution-charts.md** (10 pages)
+     - PlotlyJS integration for interactive charts
+     - Manufacturer distribution (top 10)
+     - Body class distribution
+     - Click-to-filter interaction
+     - 8 hours estimated
+  4. **phase6-4-expandable-panels.md** (4 pages)
+     - Accordion-style filter organization
+     - Panel headers show active filter counts
+     - Expand All / Collapse All buttons
+     - 4 hours estimated
+  5. **phase6-5-customizable-dashboard.md** (8 pages)
+     - Drag-and-drop resizable panels
+     - angular-gridster2 integration
+     - Save layouts to PostgreSQL
+     - 15+ hours (future, requires auth)
+- ✅ Created **PHASE-STATUS.md** with comprehensive progress tracking
+  - Detailed phase completion checkboxes
+  - Effort tracking (32 hours complete, 44-51 hours remaining)
+  - Test coverage statistics
+  - Production readiness status
+
+**Phase 4 Implementation - Performance Optimization:**
+- ✅ **Phase 4.1: TrackBy Functions** (2 hours)
+  - Added trackByManufacturerName(index, mfr) → mfr.name
+  - Added trackByModelName(index, model) → model.name
+  - Added trackByVehicleId(index, vehicle) → vehicle.vehicle_id
+  - Added trackByBodyClassValue(index, bc) → bc.value
+  - Added trackByYear(index, year) → year
+  - Applied to all 9 *ngFor loops in DiscoverComponent
+  - Prevents unnecessary DOM re-renders when data refreshes
+  - Expected improvement: 50-70% reduction in re-renders for large lists
+- ✅ **Phase 4.2: OnPush Change Detection** (2 hours)
+  - Added ChangeDetectionStrategy.OnPush to HomeComponent
+  - Added ChangeDetectionStrategy.OnPush to DiscoverComponent
+  - Both components already use async pipe (requirement)
+  - Change detection only runs when:
+    * Input properties change (reference change)
+    * Events are triggered
+    * Observables emit (async pipe)
+  - Expected improvement: Faster change detection cycles
+- ✅ **Build Verification**:
+  - TypeScript compilation: ✅ No errors
+  - Bundle size: 1.29 MB (within 1.5 MB budget)
+  - No breaking changes
+  - All async pipe usage verified
+
+**Git Commits:**
+- 278d676: fix: Exclude health endpoint from rate limiting (backend fix)
+- 181f57d: feat: Implement Phase 4 - Add trackBy functions and OnPush change detection
+
+**Files Modified:**
+- backend/src/server.ts (rate limiting skip function)
+- frontend/src/app/pages/discover/discover.component.ts (trackBy + OnPush)
+- frontend/src/app/pages/discover/discover.component.html (9 trackBy additions)
+- frontend/src/app/pages/home/home.component.ts (OnPush)
+- docs/design/improvement-roadmap.md (Phase 6 added, v3.0)
+- k8s/backend-deployment.yaml (v1.0.3)
+- k8s/frontend-deployment.yaml (v1.0.3)
+
+**Files Created:**
+- docs/PHASE-STATUS.md (comprehensive progress tracking)
+- docs/design/phase6-1-multi-select-filters.md (28 pages)
+- docs/design/phase6-2-year-range-selector.md (8 pages)
+- docs/design/phase6-3-distribution-charts.md (10 pages)
+- docs/design/phase6-4-expandable-panels.md (4 pages)
+- docs/design/phase6-5-customizable-dashboard.md (8 pages)
+
+**Roadmap Progress:**
+- ✅ Phase 1: Critical Fixes (Complete)
+- ✅ Phase 2: State Management (Complete)
+- ⏸️ Phase 3: Type Safety (Pending)
+- ✅ **Phase 4: Performance (Complete - THIS SESSION)**
+- ⏸️ Phase 5: Architecture (Pending)
+- 📋 Phase 6: Advanced UX (Designed, pending implementation)
+
+**Key Learnings:**
+- **Health Endpoint Rate Limiting**: Never rate-limit health/readiness endpoints used by orchestrators
+- **TrackBy Performance**: Essential for lists that refresh frequently (manufacturer dropdowns, table rows)
+- **OnPush Strategy**: Requires async pipe throughout (we already had it from Phase 2)
+- **Design Documentation**: Detailed upfront design (58 pages) accelerates implementation
+
+---
 
 ### What Was Accomplished (Session 11 - 2025-10-26)
 
