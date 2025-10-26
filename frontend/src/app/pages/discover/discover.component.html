@@ -172,7 +172,7 @@
             [nzSortOrder]="getSortOrder('year')"
             (nzSortOrderChange)="onSortChange('year', $event)"
             nzCustomFilter>
-            <nz-filter-trigger [(nzVisible)]="yearFilterVisible" [nzActive]="searchFilters.year != null" [nzDropdownMenu]="yearFilterMenu">
+            <nz-filter-trigger [(nzVisible)]="yearFilterVisible" [nzActive]="searchFilters.year_min != null || searchFilters.year_max != null" [nzDropdownMenu]="yearFilterMenu">
               <i nz-icon nzType="filter" nzTheme="fill"></i>
             </nz-filter-trigger>
             Year
@@ -225,19 +225,56 @@
 <!-- Filter Dropdown Menus -->
 <nz-dropdown-menu #yearFilterMenu="nzDropdownMenu">
   <div class="filter-dropdown">
-    <nz-select
-      nzShowSearch
-      nzAllowClear
-      nzPlaceHolder="Select year"
-      [(ngModel)]="searchFilters.year"
-      (ngModelChange)="onSearchChange(); yearFilterVisible = false"
-      style="width: 200px;">
-      <nz-option
-        *ngFor="let year of availableYears; trackBy: trackByYear"
-        [nzValue]="year"
-        [nzLabel]="year.toString()">
-      </nz-option>
-    </nz-select>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 8px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <nz-select
+          nzShowSearch
+          nzAllowClear
+          nzPlaceHolder="From Year"
+          [(ngModel)]="searchFilters.year_min"
+          (ngModelChange)="onYearRangeChange()"
+          style="width: 120px;">
+          <nz-option
+            *ngFor="let year of availableYears; trackBy: trackByYear"
+            [nzValue]="year"
+            [nzLabel]="year.toString()">
+          </nz-option>
+        </nz-select>
+
+        <span style="color: rgba(0,0,0,0.45);">to</span>
+
+        <nz-select
+          nzShowSearch
+          nzAllowClear
+          nzPlaceHolder="To Year"
+          [(ngModel)]="searchFilters.year_max"
+          (ngModelChange)="onYearRangeChange()"
+          style="width: 120px;">
+          <nz-option
+            *ngFor="let year of availableYears; trackBy: trackByYear"
+            [nzValue]="year"
+            [nzLabel]="year.toString()">
+          </nz-option>
+        </nz-select>
+      </div>
+
+      <!-- Validation Warning -->
+      <div
+        *ngIf="searchFilters.year_min && searchFilters.year_max && searchFilters.year_min > searchFilters.year_max"
+        style="color: #ff4d4f; font-size: 12px;">
+        <i nz-icon nzType="warning" nzTheme="fill"></i>
+        From cannot be greater than To
+      </div>
+
+      <button
+        nz-button
+        nzSize="small"
+        nzType="primary"
+        (click)="yearFilterVisible = false"
+        style="width: 100%;">
+        Apply
+      </button>
+    </div>
   </div>
 </nz-dropdown-menu>
 

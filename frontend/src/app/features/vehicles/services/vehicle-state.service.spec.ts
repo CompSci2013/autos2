@@ -972,10 +972,9 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       }).unsubscribe();
     }));
 
-    // SKIPPED: RxJS reactive timing issues with fakeAsync/tick make this test fragile
-    // The functionality works correctly in the browser (verified manually)
-    // TODO: Refactor to use marble testing or async/await pattern for better reliability
-    xit('makes the correct API call when a year is selected', fakeAsync(() => {
+    // FIXED: Converted to synchronous observable testing (no fakeAsync needed)
+    // Tests backward compatibility: year=1990 should transform to year_min/year_max
+    it('makes the correct API call when a year is selected', (done) => {
       // Test case based on user's bug report:
       // When year filter shows 1990, API call should include year_min=1990&year_max=1990
       // Bug: API call was http://autos2.minilab/api/v1/vehicles?page=1&limit=20 (no year params!)
@@ -985,34 +984,97 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
       vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
 
-      // Act: Initialize with year=1990 (simulates user selecting year from dropdown)
+      // Act: Initialize with year=1990 (simulates user selecting year from dropdown OR URL param)
       service.initialize({ year: '1990' });
 
       // CRITICAL: Must subscribe to vehicles$ to activate the reactive pipeline
-      const subscription = service.vehicles$.subscribe();
-      tick(200);
+      // Use take(1) to complete after first emission, then verify in finalize
+      service.vehicles$.pipe(take(1)).subscribe({
+        complete: () => {
+          // Assert: Check ALL calls to searchVehicles
+          const searchSpy = vehicleApiSpy.searchVehicles;
+          expect(searchSpy).toHaveBeenCalled();
 
-      // Assert: Check ALL calls to searchVehicles
-      const searchSpy = vehicleApiSpy.searchVehicles;
-      expect(searchSpy).toHaveBeenCalled();
+          // Get all calls and check if ANY of them have the correct year transformation
+          const allCalls = searchSpy.calls.all();
+          const correctCalls = allCalls.filter(call => {
+            const params = call.args[0];
+            // Backward compatibility: year should be transformed to year_min/year_max
+            return params.year_min === 1990 &&
+                   params.year_max === 1990 &&
+                   params.year === undefined;
+          });
 
-      // Get all calls and check if ANY of them have the correct year transformation
-      const allCalls = searchSpy.calls.all();
-      const correctCalls = allCalls.filter(call => {
-        const params = call.args[0];
-        return params.year_min === 1990 &&
-               params.year_max === 1990 &&
-               params.year === undefined;
+          expect(correctCalls.length).toBeGreaterThan(0,
+            `Expected at least one API call with year_min=1990 and year_max=1990, but found none.
+
+             Actual API calls made:
+             ${JSON.stringify(allCalls.map(c => c.args[0]), null, 2)}`);
+
+          done();
+        }
+      });
+    });
+
+    // CRITICAL TEST: Tests what inline year dropdown actually does
+    // This should have caught the regression!
+    it('makes the correct API call when year filter updated via dropdown (not URL)', (done) => {
+      // This tests the INLINE DROPDOWN path, not the URL initialization path
+      // Inline dropdown calls: component.onSearchChange() → service.updateFilters()
+
+      // Arrange: Set up spies
+      vehicleApiSpy.getManufacturers.and.returnValue(of(mockManufacturers));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockVehicles));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      // Act: Simulate what happens when user selects year from inline dropdown
+      // Component does: searchFilters.year = 1952; onSearchChange();
+      // onSearchChange() calls: updateFilters(searchFilters)
+      // searchFilters contains year_min: null, year_max: null from Phase 6.2!
+      service.updateFilters({
+        manufacturer: null,
+        model: null,
+        body_class: null,
+        year: 1952,
+        year_min: null,  // ← These nulls are present after Phase 6.2!
+        year_max: null   // ← This is what breaks the transformation!
       });
 
-      expect(correctCalls.length).toBeGreaterThan(0,
-        `Expected at least one API call with year_min=1990 and year_max=1990, but found none.
+      // CRITICAL: Must subscribe to vehicles$ to activate the reactive pipeline
+      service.vehicles$.pipe(take(1)).subscribe({
+        complete: () => {
+          // Assert: Check that year was transformed to year_min/year_max
+          const searchSpy = vehicleApiSpy.searchVehicles;
+          expect(searchSpy).toHaveBeenCalled();
 
-         Actual API calls made:
-         ${JSON.stringify(allCalls.map(c => c.args[0]), null, 2)}`);
+          const allCalls = searchSpy.calls.all();
 
-      subscription.unsubscribe();
-    }));
+          // DEBUG: Log actual parameters
+          console.log('=== DIAGNOSTIC OUTPUT ===');
+          console.log('Total API calls:', allCalls.length);
+          allCalls.forEach((call, idx) => {
+            console.log(`Call ${idx + 1} params:`, JSON.stringify(call.args[0], null, 2));
+          });
+
+          const correctCalls = allCalls.filter(call => {
+            const params = call.args[0];
+            return params.year_min === 1952 &&
+                   params.year_max === 1952 &&
+                   params.year === undefined;
+          });
+
+          expect(correctCalls.length).toBeGreaterThan(0,
+            `BUG REPRODUCTION: Expected API call with year_min=1952 and year_max=1952, but found none.
+
+            This is what happens when user selects year from inline dropdown!
+
+            Actual API calls made:
+            ${JSON.stringify(allCalls.map(c => c.args[0]), null, 2)}`);
+
+          done();
+        }
+      });
+    });
 
 
     it('should persist year filter in cache for URL sync', fakeAsync(() => {
