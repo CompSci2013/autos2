@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, combineLatest } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, skip } from 'rxjs/operators';
+import { Observable, Subject, combineLatest, fromEvent } from 'rxjs';
+import { takeUntil, debounceTime, distinctUntilChanged, skip, filter } from 'rxjs/operators';
 import {
   Manufacturer,
   Model,
@@ -17,8 +17,10 @@ import { VehicleSearchFilters, Pagination } from '../../features/vehicles/models
   styleUrls: ['./discover.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DiscoverComponent implements OnInit, OnDestroy {
+export class DiscoverComponent implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  @ViewChild('manufacturerSelect', { read: ElementRef }) manufacturerSelectRef!: ElementRef;
 
   // Expose observables directly - async pipe handles subscriptions
   manufacturers$: Observable<Manufacturer[]> = this.state.manufacturers$;
@@ -123,6 +125,39 @@ export class DiscoverComponent implements OnInit, OnDestroy {
       });
   }
 
+  ngAfterViewInit(): void {
+    // Set up Tab key autocomplete for manufacturer select
+    // Access the input element within the nz-select component
+    setTimeout(() => {
+      if (this.manufacturerSelectRef) {
+        const inputElement = this.manufacturerSelectRef.nativeElement.querySelector('input');
+        if (inputElement) {
+          fromEvent<KeyboardEvent>(inputElement, 'keydown')
+            .pipe(
+              filter(event => event.key === 'Tab'),
+              takeUntil(this.destroy$)
+            )
+            .subscribe(event => {
+              if (this.manufacturerSearchValue && !this.searchFilters.manufacturer) {
+                const searchLower = this.manufacturerSearchValue.toLowerCase();
+                const match = this.filteredManufacturers.find(mfr =>
+                  mfr.name.toLowerCase().startsWith(searchLower)
+                );
+
+                if (match) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  this.searchFilters.manufacturer = match.name;
+                  this.onManufacturerChange();
+                  this.manufacturerSearchValue = '';
+                }
+              }
+            });
+        }
+      }
+    }, 0);
+  }
+
   onManufacturerChange(): void {
     this.state.selectManufacturer(this.searchFilters.manufacturer || null);
   }
@@ -130,24 +165,6 @@ export class DiscoverComponent implements OnInit, OnDestroy {
   onManufacturerSearch(value: string): void {
     // Store search value for autocomplete
     this.manufacturerSearchValue = value;
-  }
-
-  onManufacturerKeyDown(event: KeyboardEvent): void {
-    // Handle Tab key for autocomplete
-    if (event.key === 'Tab' && this.manufacturerSearchValue && !this.searchFilters.manufacturer) {
-      // Find first manufacturer that starts with the search value (case insensitive)
-      const searchLower = this.manufacturerSearchValue.toLowerCase();
-      const match = this.filteredManufacturers.find(mfr =>
-        mfr.name.toLowerCase().startsWith(searchLower)
-      );
-
-      if (match) {
-        event.preventDefault(); // Prevent default Tab behavior
-        this.searchFilters.manufacturer = match.name;
-        this.onManufacturerChange();
-        this.manufacturerSearchValue = ''; // Clear search value
-      }
-    }
   }
 
   onSearchChange(): void {
