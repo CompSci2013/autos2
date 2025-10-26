@@ -1,6 +1,6 @@
 # Claude Code Session Start Prompt
 
-**Last Updated**: 2025-10-26 (Session 13 Complete - Phase 6.2 Year Range Selector!)
+**Last Updated**: 2025-10-26 (Session 13 Extended - Critical Hotfixes + Architecture Refactor)
 
 ---
 
@@ -15,10 +15,10 @@ Git Branch: main
 Production URL: http://autos2.minilab
 Dev URL: http://192.168.0.244:4201 (use IP, not localhost)
 
-Application Status: ✅ PRODUCTION-READY - v1.0.5 Deployed!
-- Production: Running at http://autos2.minilab (✅ v1.0.5 - Year Range Selector!)
-- Development: http://192.168.0.244:4201 (✅ Clean year filter UX)
-- Backend API: http://autos2.minilab/api/v1 (2 replicas, healthy)
+Application Status: ✅ PRODUCTION-READY - v1.0.9 Deployed (Hotfixes Applied!)
+- Production: Running at http://autos2.minilab (✅ v1.0.9 - Pagination race condition FIXED!)
+- Frontend: v1.0.9 (2 replicas, healthy) - Backend: v1.0.4 (2 replicas, healthy)
+- Development: http://192.168.0.244:4201
 - Dev Container: autos2-frontend-dev (✅ Chromium configured for testing)
 - Test Suite: **102/103 passing (99%)** ✅ (1 skipped - RxJS timing test)
 - Bundle Size: **1.29 MB** (within 1.5 MB budget) ✅
@@ -46,13 +46,39 @@ Application Status: ✅ PRODUCTION-READY - v1.0.5 Deployed!
    - ✅ Pushed to GitLab
    - ✅ All pods healthy, all features verified
 
-🎯 NEXT SESSION PRIORITIES:
-1. **Upgrade skipped RxJS test to marble testing** (HIGH)
-   - 1 test skipped since Session 10
-   - Convert to marble test pattern for reliability
-   - Get to 103/103 passing (100%)
+4. CRITICAL HOTFIXES (Session 13 Extended):
+   - ❌ v1.0.7: Column filter UX improvement (year column From/To dropdowns)
+   - ❌ v1.0.8: Pagination display bug - showed "0-0 of 0 vehicles" (incomplete fix)
+   - ❌ v1.0.9: Pagination flash bug - brief correct data then reset to 0 (FINAL FIX)
+   - ✅ Root Cause: clientPagination$ managed both client (page/limit) AND server (total/totalPages) state
+   - ✅ Solution: Separated responsibilities - clientPagination$ only manages {page, limit}
+   - ✅ Backend Health Fix: v1.0.4 - Rate limiting excluded health endpoint (K8s probes now working)
 
-2. **Continue Phase 6 Implementation** (MEDIUM)
+5. Architecture Analysis (Legacy Autos Patterns):
+   - ✅ Analyzed legacy Autos StateManagementService, RequestCoordinator, RouteStateService
+   - ✅ Identified critical patterns that prevent race conditions:
+     * BehaviorSubject for result state (not complex observable chains)
+     * Request deduplication/caching with RequestCoordinator
+     * Separation of URL sync logic into dedicated service
+     * Imperative state updates (not reactive merge/scan patterns)
+   - ✅ Evaluated each pattern on merit for Autos2 needs
+   - ✅ Created Phase 1 implementation plan:
+     * Priority 1: Refactor pagination to BehaviorSubject (2-3 hours)
+     * Priority 2: Add request deduplication (1-2 hours)
+     * Priority 3: Extract UrlSyncService (3-4 hours, future)
+     * Priority 4: Add integration tests (4-5 hours, future)
+
+🎯 NEXT SESSION PRIORITIES:
+1. **Architecture Refactor - Phase 1** (IN PROGRESS THIS SESSION!)
+   - Refactor pagination to BehaviorSubject pattern (2-3 hours)
+   - Add request deduplication for API calls (1-2 hours)
+   - Deploy v1.1.0 with architectural improvements
+
+2. **Architecture Refactor - Phase 2** (FUTURE)
+   - Extract UrlSyncService for testability (3-4 hours)
+   - Add OnPush integration tests (4-5 hours)
+
+3. **Continue Phase 6 Implementation** (MEDIUM)
    - Phase 6.1: Multi-Select Filters (8 hours)
    - Phase 6.3: Distribution Charts (8 hours)
    - Phase 6.4: Expandable Panels (4 hours)

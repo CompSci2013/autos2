@@ -10,6 +10,7 @@ import {
   tap,
   debounceTime,
   scan,
+  finalize,
   take
 } from 'rxjs/operators';
 import {
@@ -97,6 +98,12 @@ export class VehicleStateService {
   private currentPagination: Pagination = { page: 1, limit: 20, total: 0, totalPages: 0 };
   private currentSort: SortState = { sortBy: null, sortOrder: null };
 
+  // Pagination BehaviorSubject (imperative updates, no race conditions)
+  private paginationSubject!: BehaviorSubject<Pagination>;
+
+  // Request deduplication cache (prevents duplicate API calls)
+  private requestCache = new Map<string, Observable<SearchResult>>();
+
   constructor(private vehicleApi: VehicleService) {
     // ============================================================================
     // FILTERS STATE - Merge all filter-changing actions
@@ -164,48 +171,43 @@ export class VehicleStateService {
     );
 
     // ============================================================================
-    // PAGINATION STATE - Merge all pagination actions
+    // PAGINATION STATE - BehaviorSubject pattern (simple, no race conditions)
     // ============================================================================
 
-    // Explicit triggers for pagination reset (USER actions only, not initialization)
-    const resetPaginationTriggers$ = merge(
-      this.selectManufacturerAction$,
-      this.selectModelAction$,
-      this.updateFiltersAction$,
-      this.clearFiltersAction$
-    );
-
-    const paginationChanges$ = merge(
-      // Change page
-      this.changePageAction$.pipe(
-        map(page => ({ page }))
-      ),
-
-      // Change page size - reset to page 1
-      this.changePageSizeAction$.pipe(
-        map(limit => ({ limit, page: 1 }))
-      ),
-
-      // Reset to page 1 when USER changes filters (not during initialization)
-      resetPaginationTriggers$.pipe(
-        map(() => ({ page: 1 }))
-      )
-    );
-
-    // Pagination state with defaults
-    const initialPagination: Pagination = {
+    // Create pagination BehaviorSubject (single source of truth)
+    this.paginationSubject = new BehaviorSubject<Pagination>({
       page: 1,
       limit: 20,
       total: 0,
       totalPages: 0
-    };
+    });
+    this.pagination$ = this.paginationSubject.asObservable();
 
-    // Client-side pagination state (from user actions) - ONLY page/limit, NOT total/totalPages
-    const clientPagination$ = paginationChanges$.pipe(
-      startWith({ page: 1, limit: 20 }),  // Only client-controlled values
-      scan((current, change) => ({ ...current, ...change }), { page: 1, limit: 20 }),
-      shareReplay({ bufferSize: 1, refCount: false })
-    );
+    // Subscribe to pagination actions to update state imperatively
+    this.changePageAction$.subscribe(page => {
+      const current = this.paginationSubject.value;
+      this.paginationSubject.next({ ...current, page });
+      this.saveCurrentState();
+    });
+
+    this.changePageSizeAction$.subscribe(limit => {
+      const current = this.paginationSubject.value;
+      this.paginationSubject.next({ ...current, limit, page: 1 }); // Reset to page 1
+      this.saveCurrentState();
+    });
+
+    // Reset to page 1 when filters change (but not during initialization)
+    merge(
+      this.selectManufacturerAction$,
+      this.selectModelAction$,
+      this.updateFiltersAction$,
+      this.clearFiltersAction$
+    ).subscribe(() => {
+      const current = this.paginationSubject.value;
+      if (current.page !== 1) {
+        this.paginationSubject.next({ ...current, page: 1 });
+      }
+    });
 
     // ============================================================================
     // SORT STATE - Column sorting
@@ -247,7 +249,7 @@ export class VehicleStateService {
 
     const searchTrigger$ = combineLatest([
       this.filters$,
-      clientPagination$,  // Use client pagination for triggering searches
+      this.pagination$,   // Use pagination BehaviorSubject
       this.sortState$     // Include sort state in search trigger
     ]).pipe(
       debounceTime(100), // Small debounce to batch rapid changes
@@ -286,18 +288,8 @@ export class VehicleStateService {
           params.order = sort.sortOrder;
         }
 
-        return this.vehicleApi.searchVehicles(params).pipe(
-          map(response => ({
-            vehicles: response.data,
-            pagination: response.pagination
-          })),
-          catchError(error => {
-            console.error('Error searching vehicles:', error);
-            return of({
-              vehicles: [],
-              pagination: initialPagination
-            });
-          }),
+        // Execute search with deduplication
+        return this.executeSearchWithDeduplication(params).pipe(
           tap(() => loadingEnd$.next(false))
         );
       }),
@@ -310,25 +302,17 @@ export class VehicleStateService {
       shareReplay({ bufferSize: 1, refCount: true })
     );
 
-    // Extract server pagination from search results (has total, totalPages)
-    // IMPORTANT: Only extract total/totalPages, NOT page/limit (those come from client)
-    const serverPagination$ = searchResult$.pipe(
-      map(result => ({
-        total: result.pagination.total,
-        totalPages: result.pagination.totalPages
-      })),
-      shareReplay({ bufferSize: 1, refCount: true })
-    );
-
-    // Merge client pagination (page, limit) with server pagination (total, totalPages)
-    this.pagination$ = merge(
-      clientPagination$,
-      serverPagination$
-    ).pipe(
-      scan((current, update) => ({ ...current, ...update }), initialPagination),
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-      shareReplay({ bufferSize: 1, refCount: true })
-    );
+    // Update pagination imperatively when search results arrive
+    // Server controls total/totalPages, client already has page/limit in paginationSubject
+    searchResult$.subscribe(result => {
+      const current = this.paginationSubject.value;
+      this.paginationSubject.next({
+        page: current.page,  // Keep client's page
+        limit: current.limit,  // Keep client's limit
+        total: result.pagination.total,  // Update from server
+        totalPages: result.pagination.totalPages  // Update from server
+      });
+    });
 
     // ============================================================================
     // MANUFACTURERS - Load once on service creation
@@ -558,8 +542,43 @@ export class VehicleStateService {
   }
 
   // ============================================================================
-  // PRIVATE HELPERS - localStorage operations with versioning and error handling
+  // PRIVATE HELPERS - Request deduplication, localStorage operations
   // ============================================================================
+
+  /**
+   * Execute search with deduplication to prevent duplicate API calls
+   * If same request is already in-flight, return the cached observable
+   */
+  private executeSearchWithDeduplication(params: any): Observable<SearchResult> {
+    // Create cache key from params (deterministic)
+    const cacheKey = JSON.stringify(params);
+
+    // Check if request is already in-flight
+    if (this.requestCache.has(cacheKey)) {
+      return this.requestCache.get(cacheKey)!;
+    }
+
+    // Create new request observable
+    const request$ = this.vehicleApi.searchVehicles(params).pipe(
+      map(response => ({
+        vehicles: response.data,
+        pagination: response.pagination
+      })),
+      catchError(error => {
+        console.error('Error searching vehicles:', error);
+        return of({
+          vehicles: [],
+          pagination: { page: 1, limit: 20, total: 0, totalPages: 0 }
+        });
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
+      finalize(() => this.requestCache.delete(cacheKey))
+    );
+
+    // Cache the in-flight request
+    this.requestCache.set(cacheKey, request$);
+    return request$;
+  }
 
   /**
    * Save current state to localStorage (imperative helper)
