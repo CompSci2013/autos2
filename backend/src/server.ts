@@ -40,7 +40,7 @@ function createApp(): Express {
     app.use(morgan('combined'));
   }
 
-  // Rate limiting
+  // Rate limiting (exclude health endpoint from rate limiting)
   const limiter = rateLimit({
     windowMs: config.rateLimit.windowMs,
     max: config.rateLimit.maxRequests,
@@ -49,6 +49,10 @@ function createApp(): Express {
         code: 'RATE_LIMIT_EXCEEDED',
         message: 'Too many requests, please try again later',
       },
+    },
+    skip: (req) => {
+      // Exclude health endpoint from rate limiting (used by K8s probes)
+      return req.path === `/api/${config.apiVersion}/health`;
     },
   });
   app.use(`/api/${config.apiVersion}`, limiter);
