@@ -200,11 +200,11 @@ export class VehicleStateService {
       totalPages: 0
     };
 
-    // Client-side pagination state (from user actions)
+    // Client-side pagination state (from user actions) - ONLY page/limit, NOT total/totalPages
     const clientPagination$ = paginationChanges$.pipe(
-      startWith(initialPagination),
-      scan((current, change) => ({ ...current, ...change }), initialPagination),
-      shareReplay({ bufferSize: 1, refCount: true })
+      startWith({ page: 1, limit: 20 }),  // Only client-controlled values
+      scan((current, change) => ({ ...current, ...change }), { page: 1, limit: 20 }),
+      shareReplay({ bufferSize: 1, refCount: false })
     );
 
     // ============================================================================
