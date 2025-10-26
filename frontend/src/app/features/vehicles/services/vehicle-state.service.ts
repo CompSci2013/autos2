@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, merge, combineLatest, EMPTY, of } from 'rxjs';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, Subject, merge, combineLatest, EMPTY, of, Subscription } from 'rxjs';
 import {
   map,
   switchMap,
@@ -51,7 +51,13 @@ interface StoredState {
 @Injectable({
   providedIn: 'root'
 })
-export class VehicleStateService {
+export class VehicleStateService implements OnDestroy {
+  // ============================================================================
+  // SUBSCRIPTION MANAGEMENT - Cleanup to prevent memory leaks
+  // ============================================================================
+
+  private subscriptions = new Subscription();
+
   // ============================================================================
   // LOCALSTORAGE CONFIGURATION - Professional pattern for state persistence
   // ============================================================================
@@ -184,30 +190,36 @@ export class VehicleStateService {
     this.pagination$ = this.paginationSubject.asObservable();
 
     // Subscribe to pagination actions to update state imperatively
-    this.changePageAction$.subscribe(page => {
-      const current = this.paginationSubject.value;
-      this.paginationSubject.next({ ...current, page });
-      this.saveCurrentState();
-    });
+    this.subscriptions.add(
+      this.changePageAction$.subscribe(page => {
+        const current = this.paginationSubject.value;
+        this.paginationSubject.next({ ...current, page });
+        this.saveCurrentState();
+      })
+    );
 
-    this.changePageSizeAction$.subscribe(limit => {
-      const current = this.paginationSubject.value;
-      this.paginationSubject.next({ ...current, limit, page: 1 }); // Reset to page 1
-      this.saveCurrentState();
-    });
+    this.subscriptions.add(
+      this.changePageSizeAction$.subscribe(limit => {
+        const current = this.paginationSubject.value;
+        this.paginationSubject.next({ ...current, limit, page: 1 }); // Reset to page 1
+        this.saveCurrentState();
+      })
+    );
 
     // Reset to page 1 when filters change (but not during initialization)
-    merge(
-      this.selectManufacturerAction$,
-      this.selectModelAction$,
-      this.updateFiltersAction$,
-      this.clearFiltersAction$
-    ).subscribe(() => {
-      const current = this.paginationSubject.value;
-      if (current.page !== 1) {
-        this.paginationSubject.next({ ...current, page: 1 });
-      }
-    });
+    this.subscriptions.add(
+      merge(
+        this.selectManufacturerAction$,
+        this.selectModelAction$,
+        this.updateFiltersAction$,
+        this.clearFiltersAction$
+      ).subscribe(() => {
+        const current = this.paginationSubject.value;
+        if (current.page !== 1) {
+          this.paginationSubject.next({ ...current, page: 1 });
+        }
+      })
+    );
 
     // ============================================================================
     // SORT STATE - Column sorting
@@ -304,15 +316,17 @@ export class VehicleStateService {
 
     // Update pagination imperatively when search results arrive
     // Server controls total/totalPages, client already has page/limit in paginationSubject
-    searchResult$.subscribe(result => {
-      const current = this.paginationSubject.value;
-      this.paginationSubject.next({
-        page: current.page,  // Keep client's page
-        limit: current.limit,  // Keep client's limit
-        total: result.pagination.total,  // Update from server
-        totalPages: result.pagination.totalPages  // Update from server
-      });
-    });
+    this.subscriptions.add(
+      searchResult$.subscribe(result => {
+        const current = this.paginationSubject.value;
+        this.paginationSubject.next({
+          page: current.page,  // Keep client's page
+          limit: current.limit,  // Keep client's limit
+          total: result.pagination.total,  // Update from server
+          totalPages: result.pagination.totalPages  // Update from server
+        });
+      })
+    );
 
     // ============================================================================
     // MANUFACTURERS - Load once on service creation
@@ -376,9 +390,15 @@ export class VehicleStateService {
     );
 
     // Subscribe to keep cached values updated for synchronous localStorage saves
-    this.filters$.subscribe(filters => this.currentFilters = filters);
-    this.pagination$.subscribe(pagination => this.currentPagination = pagination);
-    this.sortState$.subscribe(sort => this.currentSort = sort);
+    this.subscriptions.add(
+      this.filters$.subscribe(filters => this.currentFilters = filters)
+    );
+    this.subscriptions.add(
+      this.pagination$.subscribe(pagination => this.currentPagination = pagination)
+    );
+    this.subscriptions.add(
+      this.sortState$.subscribe(sort => this.currentSort = sort)
+    );
   }
 
   // ============================================================================
@@ -668,5 +688,18 @@ export class VehicleStateService {
     // For now, just ignore old versions
     console.warn('Cannot migrate old state version, using defaults');
     return null;
+  }
+
+  // ============================================================================
+  // LIFECYCLE HOOKS - Cleanup on destroy
+  // ============================================================================
+
+  /**
+   * Clean up subscriptions to prevent memory leaks
+   * Called when service is destroyed (e.g., when module is destroyed)
+   */
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+    this.requestCache.clear();
   }
 }
