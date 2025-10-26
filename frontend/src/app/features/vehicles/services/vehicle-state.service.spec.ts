@@ -3,6 +3,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { VehicleStateService } from './vehicle-state.service';
 import { VehicleService } from '../../../services/vehicle.service';
 import { of, throwError } from 'rxjs';
+import { skip, take } from 'rxjs/operators';
 import { VehicleSearchFilters, Pagination } from '../models/vehicle.model';
 
 /**
@@ -715,6 +716,58 @@ describe('VehicleStateService - Navigation & Persistence', () => {
       service.filters$.subscribe(filters => {
         expect(filters.manufacturer).toBeNull();
       }).unsubscribe();
+    }));
+
+    it('should load all vehicles with correct pagination on first visit (browse-first pattern)', fakeAsync(() => {
+      // Test case based on user's bug report:
+      // When page loads with no filters, should show "Showing 1-20 of 793 vehicles"
+      // Bug: Shows "Showing 0-0 of 0 vehicles" instead
+
+      // Arrange: Mock API to return vehicles with pagination data
+      const mockResponse = {
+        data: [
+          { vehicle_id: 'test-1', year: 1970, manufacturer: 'Ford', model: 'Mustang', body_class: 'Coupe' },
+          { vehicle_id: 'test-2', year: 1971, manufacturer: 'Chevy', model: 'Camaro', body_class: 'Coupe' }
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 793,
+          totalPages: 40
+        }
+      };
+
+      vehicleApiSpy.getManufacturers.and.returnValue(of(mockManufacturers));
+      vehicleApiSpy.searchVehicles.and.returnValue(of(mockResponse));
+      vehicleApiSpy.getFilters.and.returnValue(of(mockFilters));
+
+      // Act: Initialize with no URL params (simulates first visit)
+      service.initialize({});
+
+      // Subscribe to activate the reactive pipeline
+      const subscription = service.vehicles$.subscribe();
+      tick(200);
+
+      // Assert: Should have vehicles
+      service.vehicles$.subscribe(vehicles => {
+        expect(vehicles.length).toBe(2);
+        expect(vehicles[0].vehicle_id).toBe('test-1');
+      }).unsubscribe();
+
+      // Assert: Pagination should show correct totals from API
+      // Skip the first emission (clientPagination$ with total: 0)
+      // and wait for serverPagination$ to emit with actual totals
+      service.pagination$.pipe(
+        skip(1),  // Skip first emission with total: 0
+        take(1)   // Take the next emission (should have server totals)
+      ).subscribe(pagination => {
+        expect(pagination.page).toBe(1);
+        expect(pagination.limit).toBe(20);
+        expect(pagination.total).toBe(793);
+        expect(pagination.totalPages).toBe(40);
+      }).unsubscribe();
+
+      subscription.unsubscribe();
     }));
   });
 

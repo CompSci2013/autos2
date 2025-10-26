@@ -303,7 +303,8 @@ export class VehicleStateService {
       map(result => ({
         total: result.pagination.total,
         totalPages: result.pagination.totalPages
-      }))
+      })),
+      shareReplay({ bufferSize: 1, refCount: true })
     );
 
     // Merge client pagination (page, limit) with server pagination (total, totalPages)
