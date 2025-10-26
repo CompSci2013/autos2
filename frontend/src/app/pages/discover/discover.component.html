@@ -170,7 +170,11 @@
           <th
             nzShowSort
             [nzSortOrder]="getSortOrder('year')"
-            (nzSortOrderChange)="onSortChange('year', $event)">
+            (nzSortOrderChange)="onSortChange('year', $event)"
+            nzCustomFilter>
+            <nz-filter-trigger [(nzVisible)]="yearFilterVisible" [nzActive]="searchFilters.year != null" [nzDropdownMenu]="yearFilterMenu">
+              <i nz-icon nzType="filter" nzTheme="fill"></i>
+            </nz-filter-trigger>
             Year
           </th>
           <th
@@ -219,6 +223,24 @@
 </div>
 
 <!-- Filter Dropdown Menus -->
+<nz-dropdown-menu #yearFilterMenu="nzDropdownMenu">
+  <div class="filter-dropdown">
+    <nz-select
+      nzShowSearch
+      nzAllowClear
+      nzPlaceHolder="Select year"
+      [(ngModel)]="searchFilters.year"
+      (ngModelChange)="onSearchChange(); yearFilterVisible = false"
+      style="width: 200px;">
+      <nz-option
+        *ngFor="let year of availableYears; trackBy: trackByYear"
+        [nzValue]="year"
+        [nzLabel]="year.toString()">
+      </nz-option>
+    </nz-select>
+  </div>
+</nz-dropdown-menu>
+
 <nz-dropdown-menu #manufacturerFilterMenu="nzDropdownMenu">
   <div class="filter-dropdown">
     <nz-select
